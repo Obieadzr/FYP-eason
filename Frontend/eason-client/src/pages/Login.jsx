@@ -9,7 +9,7 @@ const Login = () => {
 
   return (
     <>
-      {/* Soft Background */}
+      
       <div className="fixed inset-0 -z-10 overflow-hidden">
         <div className="absolute top-20 left-20 w-96 h-96 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
         <div className="absolute bottom-20 right-20 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
@@ -17,14 +17,14 @@ const Login = () => {
 
       <div className="min-h-screen flex items-center justify-center px-6 py-12 font-['Inter']">
         <div className="w-full max-w-md">
-          {/* SINGLE GLASS CARD */}
+       
           <div className="bg-white/80 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/40">
             <div className="text-center mb-10">
               <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                {/* <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 3h18v18H3z" />
                   <path d="M3 9h18M9 21V9" />
-                </svg>
+                </svg> */}
               </div>
               <h1 className="text-4xl font-black text-gray-900">Welcome Back</h1>
               <p className="text-gray-600 mt-2">Sign in to your inventory dashboard</p>
