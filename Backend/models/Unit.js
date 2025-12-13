@@ -7,4 +7,4 @@ const unitSchema =new mongoose.Schema({
     timestamps:true
 });
 
-export default mongoose.model("Unit",unitSchema);
+export default mongoose.model("Unit",unitSchema); 

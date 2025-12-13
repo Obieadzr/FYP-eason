@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.553.0",
     "mongoose": "^8.19.3",
+    "multer": "^2.0.2",
     "slugify": "^1.6.6"
   },
   "devDependencies": {

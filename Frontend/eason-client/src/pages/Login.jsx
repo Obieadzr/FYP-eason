@@ -1,82 +1,155 @@
 // src/pages/Login.jsx
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Eye, EyeOff } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import API from "../utils/api.js";
+import { useAuth } from "../context/AuthContext.jsx";
+import { Canvas } from "@react-three/fiber";
+import { Float, MeshDistortMaterial, Sphere } from "@react-three/drei";
+
+const FiberBg = () => (
+  <Canvas camera={{ position: [0, 0, 10], fov: 70 }}>
+    <ambientLight intensity={0.8} />
+    <Float speed={4} rotationIntensity={0.6} floatIntensity={1.5}>
+      <Sphere args={[1, 128, 128]} scale={4}>
+        <MeshDistortMaterial
+          color="#10b981"
+          attach="material"
+          distort={0.35}
+          speed={1.8}
+          roughness={0}
+          metalness={0.95}
+          transparent
+          opacity={0.18}
+        />
+      </Sphere>
+    </Float>
+  </Canvas>
+);
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+
+  try {
+    const res = await API.post("/auth/login", { email, password });
+    
+    login(res.data.token, res.data.user);
+
+   
+    const userRole = res.data.user.role; 
+
+    if (userRole === "wholesaler" || userRole === "admin") {
+      navigate("/dashboard", { replace: true });
+    } else if (userRole === "retailer") {
+     navigate("/marketplace", { replace: true });
+    } else {
+      // fallback
+      navigate("/dashboard", { replace: true });
+    }
+
+  } catch (err) {
+    setError(err.response?.data?.message || "Invalid email or password");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
-      
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-20 left-20 w-96 h-96 bg-purple-100 rounded-full blur-3xl opacity-50"></div>
-        <div className="absolute bottom-20 right-20 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-50"></div>
-      </div>
+      <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet" />
 
-      <div className="min-h-screen flex items-center justify-center px-6 py-12 font-['Inter']">
-        <div className="w-full max-w-md">
-       
-          <div className="bg-white/80 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/40">
-            <div className="text-center mb-10">
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                {/* <svg className="w-9 h-9 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3h18v18H3z" />
-                  <path d="M3 9h18M9 21V9" />
-                </svg> */}
-              </div>
-              <h1 className="text-4xl font-black text-gray-900">Welcome Back</h1>
-              <p className="text-gray-600 mt-2">Sign in to your inventory dashboard</p>
+      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 relative overflow-hidden font-['Satoshi'] flex items-center justify-center px-6">
+        {/* Fiber Background */}
+        <div className="absolute inset-0 opacity-60">
+          <FiberBg />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10 w-full max-w-md">
+          <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/50 p-10">
+            {/* Logo */}
+            <div className="text-center mb-12">
+              <h1 className="text-6xl font-light tracking-tight text-gray-900">
+                eAson
+              </h1>
+              <p className="text-sm text-gray-500 mt-2 tracking-widest">WHOLESALE OS</p>
             </div>
 
-            <form className="space-y-6">
+            <h2 className="text-3xl font-light text-gray-800 text-center mb-10">
+              Sign in to continue
+            </h2>
+
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-center text-sm">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-6">
               <input
                 type="email"
-                placeholder="you@company.com"
-                className="w-full px-5 py-4 bg-white/60 border border-gray-300 rounded-2xl text-sm placeholder-gray-500 
-                           focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-6 py-5 bg-gray-50/70 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:bg-white transition text-base font-light"
               />
 
               <div className="relative">
                 <input
                   type={showPass ? "text" : "password"}
                   placeholder="Password"
-                  className="w-full px-5 py-4 bg-white/60 border border-gray-300 rounded-2xl text-sm 
-                             focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-6 py-5 bg-gray-50/70 border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-emerald-500 focus:bg-white transition pr-16 text-base font-light"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
                 >
-                  {showPass ? <EyeOff className="w-5 h-5 text-gray-500" /> : <Eye className="w-5 h-5 text-gray-500" />}
+                  {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
 
-              <div className="flex justify-between items-center text-sm">
-                <label className="flex items-center gap-2">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-400" />
-                  <span className="text-gray-700">Keep me signed in</span>
-                </label>
-                <a href="#" className="text-purple-600 font-semibold hover:underline">Forgot?</a>
-              </div>
-
-              <button className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition transform hover:scale-[1.02]">
-                Sign In
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-5 bg-emerald-600 text-white font-medium rounded-2xl hover:bg-emerald-700 disabled:opacity-60 transition text-base flex items-center justify-center gap-3"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Continue"}
               </button>
-
-              <p className="text-center text-sm text-gray-600 mt-6">
-                New to eAson?{" "}
-                <span
-                  onClick={() => navigate("/register")}
-                  className="text-purple-600 font-bold cursor-pointer hover:underline"
-                >
-                  Create account
-                </span>
-              </p>
             </form>
+
+            <div className="mt-8 text-center space-y-3">
+              <a href="#" className="text-sm text-gray-600 hover:text-emerald-600 transition">
+                Forgot your password?
+              </a>
+              <p className="text-sm text-gray-500">
+                New to eAson?{" "}
+                <Link to="/register" className="text-emerald-600 font-medium hover:underline">
+                  Create account
+                </Link>
+              </p>
+            </div>
           </div>
+
+          <p className="text-center text-xs text-gray-500 mt-10 tracking-wider">
+            Made in Kathmandu • 2025
+          </p>
         </div>
       </div>
     </>

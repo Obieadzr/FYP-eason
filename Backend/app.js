@@ -1,27 +1,52 @@
+// app.js — FINAL CLEAN VERSION
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from "dotenv";
-import authRoutes from "./routes/authRoutes.js"
-import categoryRoutes from "./routes/categoryRoutes.js"
-import unitRoutes from "./routes/unitRoutes.js"
-import productRoutes from "./routes/productRoutes.js"
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// CORS
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
+
+// BODY PARSERS
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// SERVE UPLOADED IMAGES
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// ROUTES
+import authRoutes from "./routes/authRoutes.js";
+import categoryRoutes from "./routes/categoryRoutes.js";
+import unitRoutes from "./routes/unitRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/products", productRoutes);
+
+app.get("/", (req, res) => {
+  res.send("eAson backend running!");
+});
+
+// DB & SERVER
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("MongoDB connection error:", err));
+  .catch(err => console.error(err));
 
-app.use('/api/auth',authRoutes)
-app.get("/",(req,res)=>{
-    res.send("eAson backend running")
-})
-app.listen(5000,()=>console.log("server running on port 5000"))
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});

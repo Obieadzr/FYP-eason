@@ -1,32 +1,63 @@
+// src/pages/Register.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import API from "../utils/api.js";
-import { Eye, EyeOff } from "lucide-react";
+import { Canvas } from "@react-three/fiber";
+import { Float, MeshDistortMaterial, Sphere } from "@react-three/drei";
+import { useRef } from "react";
+
+const FiberScene = () => (
+  <Canvas camera={{ position: [0, 0, 8], fov: 60 }}>
+    <ambientLight intensity={1} />
+    <directionalLight position={[10, 10, 5]} intensity={1} />
+    <Float speed={2} rotationIntensity={1} floatIntensity={2}>
+      <Sphere args={[1, 64, 64]} scale={3}>
+        <MeshDistortMaterial
+          color="#10b981"
+          attach="material"
+          distort={0.3}
+          speed={2}
+          roughness={0.1}
+          metalness={0.8}
+          transparent
+          opacity={0.25}
+        />
+      </Sphere>
+    </Float>
+    <Float speed={3} rotationIntensity={0.8} floatIntensity={1.5}>
+      <Sphere args={[1, 64, 64]} scale={2.2} position={[2, -1, -2]}>
+        <MeshDistortMaterial
+          color="#14b8a6"
+          attach="material"
+          distort={0.4}
+          speed={2.5}
+          roughness={0.2}
+          metalness={0.9}
+          transparent
+          opacity={0.2}
+        />
+      </Sphere>
+    </Float>
+  </Canvas>
+);
 
 const Register = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    fname: "",
-    lname: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "retailer",
-  });
-
   const [showPass, setShowPass] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) =>
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const [formData, setFormData] = useState({
+    fname: "", lname: "", email: "", password: "", confirmPassword: "", role: "retailer"
+  });
+
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.password !== formData.confirmPassword)
-      return setError("Passwords don't match");
-
+    if (formData.password !== formData.confirmPassword) return setError("Passwords don't match");
     setLoading(true);
     try {
       await API.post("/auth/register", {
@@ -38,7 +69,7 @@ const Register = () => {
       });
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to register");
+      setError(err.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -46,165 +77,118 @@ const Register = () => {
 
   return (
     <>
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-32 left-32 w-80 h-80 bg-purple-200 rounded-full blur-3xl opacity-30"></div>
-        <div className="absolute bottom-40 right-40 w-72 h-72 bg-blue-200 rounded-full blur-3xl opacity-30"></div>
-      </div>
+      {/* Satoshi Light & Medium only */}
+      <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
 
-      <div className="min-h-screen flex items-center justify-center px-6 py-12 font-['Inter']">
-        <div className="flex flex-col lg:flex-row gap-8 max-w-6xl w-full items-stretch">
-          <div className="flex-1">
-            <div className="bg-white/95 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/40 h-full flex flex-col justify-center">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg"></div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">eAson</h1>
-                  <p className="text-xs text-gray-500">Inventory Management</p>
-                </div>
-              </div>
-
-              <h2 className="text-5xl font-black text-gray-900 mb-3">Create Account</h2>
-              <p className="text-gray-600 text-base mb-10">Join eAson to modernize your inventory operations.</p>
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-5">
-                  <input
-                    type="text"
-                    name="fname"
-                    placeholder="First name"
-                    required
-                    onChange={handleChange}
-                    className="px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm placeholder-gray-500 focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200"
-                  />
-                  <input
-                    type="text"
-                    name="lname"
-                    placeholder="Last name"
-                    required
-                    onChange={handleChange}
-                    className="px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm placeholder-gray-500 focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200"
-                  />
-                </div>
-
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Work email"
-                  required
-                  onChange={handleChange}
-                  className="w-full px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm placeholder-gray-500 focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200"
-                />
-
-                <select
-                  name="role"
-                  required
-                  onChange={handleChange}
-                  value={formData.role}
-                  className="w-full px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200 text-gray-700"
-                >
-                  <option value="retailer">Retailer</option>
-                  <option value="wholesaler">Wholesaler</option>
-                  <option value="admin">Admin</option>
-                </select>
-
-                <div className="grid grid-cols-2 gap-5">
-                  <div className="relative">
-                    <input
-                      type={showPass ? "text" : "password"}
-                      name="password"
-                      placeholder="Password"
-                      required
-                      onChange={handleChange}
-                      className="w-full px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPass(!showPass)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2"
-                    >
-                      {showPass ? <EyeOff className="w-5 h-5 text-gray-500" /> : <Eye className="w-5 h-5 text-gray-500" />}
-                    </button>
-                  </div>
-
-                  <div className="relative">
-                    <input
-                      type={showConfirm ? "text" : "password"}
-                      name="confirmPassword"
-                      placeholder="Confirm"
-                      required
-                      onChange={handleChange}
-                      className="w-full px-5 py-4 bg-white/70 border border-gray-300 rounded-2xl text-sm focus:outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-100 transition duration-200 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirm(!showConfirm)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2"
-                    >
-                      {showConfirm ? <EyeOff className="w-5 h-5 text-gray-500" /> : <Eye className="w-5 h-5 text-gray-500" />}
-                    </button>
-                  </div>
-                </div>
-
-                {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
-
-                <p className="text-xs text-gray-600">
-                  By creating an account, you agree to our{" "}
-                  <a href="#" className="text-purple-600 font-semibold">Terms</a> and{" "}
-                  <a href="#" className="text-purple-600 font-semibold">Privacy</a>.
-                </p>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition transform hover:scale-[1.02] duration-200 text-base"
-                >
-                  {loading ? "Creating..." : "Create account"}
-                </button>
-
-                <p className="text-center text-sm text-gray-600 mt-8">
-                  Already have an account?{" "}
-                  <span
-                    onClick={() => navigate("/login")}
-                    className="text-purple-600 font-bold cursor-pointer hover:underline"
-                  >
-                    Sign in
-                  </span>
-                </p>
-              </form>
-            </div>
+      <div className="min-h-screen flex font-['Satoshi'] overflow-hidden">
+        {/* LEFT: Drei Fiber Magic */}
+        <div className="hidden lg:block flex-1 bg-gradient-to-br from-emerald-50 via-white to-teal-50 relative">
+          <div className="absolute inset-0">
+            <FiberScene />
           </div>
-
-          <div className="flex-1">
-            <div className="bg-white/20 backdrop-blur-3xl rounded-3xl shadow-2xl p-10 border border-white/30 h-full flex flex-col justify-center">
-              <div className="text-gray-800">
-                <p className="text-sm font-bold uppercase tracking-wider mb-3">Everything you need to start</p>
-                <p className="text-base mb-10 leading-relaxed">Set up in minutes with guided steps and live validation. No credit card required.</p>
-
-                <div className="grid grid-cols-2 gap-6">
-                  {[
-                    { title: "Team workspaces", desc: "The simplest way to manage stock, sales, and growth all in one place." },
-                    { title: "Enterprise security", desc: "Digitize your wholesale and retail workflow instantly with eAson." },
-                    { title: "Fast imports", desc: "Smart inventory, smooth sales, zero headaches." },
-                    { title: "Guided success", desc: "Run your entire business from one dashboard" },
-                  ].map((item, i) => (
-                    <div key={i} className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/50">
-                      <p className="font-bold text-gray-900 text-sm">{item.title}</p>
-                      <p className="text-xs text-gray-700 mt-2 leading-relaxed">{item.desc}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-10 bg-white/60 backdrop-blur-xl rounded-2xl p-8 border border-white/40">
-                  <p className="font-bold text-gray-900">Everything in one place</p>
-                  <p className="text-sm text-gray-700 mt-3">
-                    Centralize inventory, orders and suppliers in a single dashboard with powerful filters and exports.
-                  </p>
-                </div>
-              </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-white/80 via-transparent to-transparent" />
+          <div className="relative h-full flex items-center justify-center">
+            <div className="text-center px-10">
+              <h1 className="text-7xl font-medium tracking-tight text-gray-900">
+                eAson
+              </h1>
+              <p className="text-xl text-gray-600 mt-4 tracking-wide">
+                Wholesale, reimagined.
+              </p>
             </div>
           </div>
         </div>
-      </div>  
+
+        {/* RIGHT: Ultra Minimal Form */}
+        <div className="flex-1 bg-black flex items-center justify-center px-6 py-16">
+          <div className="w-full max-w-md">
+            <div className="mb-16 text-center">
+              <h2 className="text-5xl font-medium text-white tracking-tight">
+                Create your account
+              </h2>
+              <p className="text-gray-500 mt-3 text-sm">
+                Join thousands of Nepali businesses
+              </p>
+            </div>
+
+            {error && (
+              <div className="mb-8 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm text-center">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                <input
+                  type="text" name="fname" placeholder="First name" required
+                  value={formData.fname} onChange={handleChange}
+                  className="px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition text-base"
+                />
+                <input
+                  type="text" name="lname" placeholder="Last name" required
+                  value={formData.lname} onChange={handleChange}
+                  className="px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition text-base"
+                />
+              </div>
+
+              <input
+                type="email" name="email" placeholder="you@business.com" required
+                value={formData.email} onChange={handleChange}
+                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition text-base"
+              />
+
+              <select
+                name="role" value={formData.role} onChange={handleChange}
+                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition text-base"
+              >
+                <option value="retailer">Retailer</option>
+                <option value="wholesaler">Wholesaler</option>
+              </select>
+
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  name="password" placeholder="Password" required
+                  value={formData.password} onChange={handleChange}
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition pr-14 text-base"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                  {showPass ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  name="confirmPassword" placeholder="Confirm password" required
+                  value={formData.confirmPassword} onChange={handleChange}
+                  className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition pr-14 text-base"
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white">
+                  {showConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+
+              <button
+                type="submit" disabled={loading}
+                className="w-full py-5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-500 disabled:opacity-50 transition flex items-center justify-center gap-3 text-base"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Create account"}
+                {!loading && <ArrowRight className="w-5 h-5" />}
+              </button>
+            </form>
+
+            <p className="text-center mt-10 text-gray-500 text-sm">
+              Already have an account?{" "}
+              <span onClick={() => navigate("/login")} className="text-emerald-400 font-medium cursor-pointer hover:underline">
+                Sign in
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
     </>
   );
 };

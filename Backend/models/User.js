@@ -16,3 +16,4 @@ userSchema.set('toJSON', { virtuals: true });
 userSchema.set('toObject', { virtuals: true });
 
 export default mongoose.model("User", userSchema);
+ 
