@@ -22,12 +22,12 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []); 
 
-  const login = (token, userData) => {
-    localStorage.setItem("token", token);
-    localStorage.setItem("user", JSON.stringify(userData));
-    setUser(userData);
-    API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  };
+const login = (token, userData) => {
+  localStorage.setItem("token", token);
+  localStorage.setItem("user", JSON.stringify(userData));
+  setUser(userData);
+  API.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+};
 
   const logout = () => {
     localStorage.removeItem("token");

@@ -1,11 +1,11 @@
-// app.js — FINAL CLEAN VERSION
+// app.js 
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from "dotenv";
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import adminRoutes from "./routes/adminRoutes.js"
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,7 +36,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/units", unitRoutes);
 app.use("/api/products", productRoutes);
-
+app.use("/api/admin", adminRoutes);
 app.get("/", (req, res) => {
   res.send("eAson backend running!");
 });

@@ -36,60 +36,55 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError("");
-  setLoading(true);
+    try {
+      const res = await API.post("/auth/login", { email, password });
+      
+      login(res.data.token, res.data.user);
 
-  try {
-    const res = await API.post("/auth/login", { email, password });
-    
-    login(res.data.token, res.data.user);
+      const { role, verified } = res.data.user;
 
-   
-    const userRole = res.data.user.role; 
-
-    if (userRole === "wholesaler" || userRole === "admin") {
-      navigate("/dashboard", { replace: true });
-    } else if (userRole === "retailer") {
-     navigate("/marketplace", { replace: true });
-    } else {
-      // fallback
-      navigate("/dashboard", { replace: true });
+      if (role === "admin") {
+        navigate("/dashboard", { replace: true });
+      } else if (role === "retailer") {
+        navigate("/marketplace", { replace: true });
+      } else if (role === "wholesaler") {
+        if (verified) {
+          navigate("/marketplace", { replace: true });
+        } else {
+          navigate("/pending-approval", { replace: true });
+        }
+      } else {
+        navigate("/marketplace", { replace: true });
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
     }
-
-  } catch (err) {
-    setError(err.response?.data?.message || "Invalid email or password");
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
       <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet" />
 
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 relative overflow-hidden font-['Satoshi'] flex items-center justify-center px-6">
-        {/* Fiber Background */}
         <div className="absolute inset-0 opacity-60">
           <FiberBg />
         </div>
 
-        {/* Content */}
         <div className="relative z-10 w-full max-w-md">
           <div className="bg-white/80 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/50 p-10">
-            {/* Logo */}
             <div className="text-center mb-12">
-              <h1 className="text-6xl font-light tracking-tight text-gray-900">
-                eAson
-              </h1>
+              <h1 className="text-6xl font-light tracking-tight text-gray-900">eAson</h1>
               <p className="text-sm text-gray-500 mt-2 tracking-widest">WHOLESALE OS</p>
             </div>
 
-            <h2 className="text-3xl font-light text-gray-800 text-center mb-10">
-              Sign in to continue
-            </h2>
+            <h2 className="text-3xl font-light text-gray-800 text-center mb-10">Sign in to continue</h2>
 
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-center text-sm">

@@ -42,7 +42,8 @@ export const loginUser = async (req, res) => {
   user: { 
     id: user._id, 
     fullName: user.fullName, 
-    role: user.role 
+    role: user.role ,
+    verified: user.verified
   } 
 });
 

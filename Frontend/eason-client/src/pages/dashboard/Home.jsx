@@ -2,9 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import API from "../../utils/api";
-import { Package, Layers, AlertTriangle, Plus, ArrowRight, Activity } from "lucide-react";
+import { Package, Layers, AlertTriangle, Plus, ArrowRight, Activity, Clock, CheckCircle, XCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 
 const Home = () => {
   const { user } = useAuth();
@@ -15,11 +16,14 @@ const Home = () => {
     totalStock: 0,
     lowStock: 0,
   });
-  const [loading, setLoading] = useState(true);
+  const [pendingWholesalers, setPendingWholesalers] = useState([]);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [loadingPending, setLoadingPending] = useState(true);
+  const [approving, setApproving] = useState({});
 
-  // Change this number if you want low stock to trigger at 5 instead of 10
   const LOW_STOCK_THRESHOLD = 10;
 
+  // Fetch product stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -42,15 +46,56 @@ const Home = () => {
           lowStock,
         });
       } catch (err) {
-        console.error("Failed to fetch data:", err);
+        console.error("Failed to fetch stats:", err);
       } finally {
-        setLoading(false);
+        setLoadingStats(false);
       }
     };
     fetchStats();
   }, []);
 
-  if (loading) {
+  // Fetch pending wholesalers (only for admin)
+  useEffect(() => {
+    if (user?.role === "admin") {
+      const fetchPending = async () => {
+        try {
+          const res = await API.get("/admin/pending-wholesalers");
+          setPendingWholesalers(res.data || []);
+        } catch (err) {
+          toast.error("Failed to load pending applications");
+        } finally {
+          setLoadingPending(false);
+        }
+      };
+      fetchPending();
+    }
+  }, [user]);
+
+  const handleApprove = async (id) => {
+    setApproving(prev => ({ ...prev, [id]: true }));
+    try {
+      await API.put(`/admin/approve-wholesaler/${id}`);
+      toast.success("Wholesaler approved!");
+      setPendingWholesalers(prev => prev.filter(u => u._id !== id));
+    } catch (err) {
+      toast.error("Failed to approve");
+    } finally {
+      setApproving(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const handleReject = async (id) => {
+    if (!window.confirm("Reject and delete this application?")) return;
+    try {
+      await API.delete(`/admin/reject-wholesaler/${id}`);
+      toast.success("Application rejected");
+      setPendingWholesalers(prev => prev.filter(u => u._id !== id));
+    } catch (err) {
+      toast.error("Failed to reject");
+    }
+  };
+
+  if (loadingStats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="w-10 h-10 border-2 border-gray-300 border-t-emerald-600 rounded-full animate-spin"></div>
@@ -184,6 +229,64 @@ const Home = () => {
             </div>
           </motion.div>
         </div>
+
+        {/* Admin Only: Pending Wholesalers Section */}
+        {user?.role === "admin" && (
+          <div className="mt-12">
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8">
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                <Clock className="w-7 h-7 text-orange-500" />
+                Pending Wholesaler Applications ({pendingWholesalers.length})
+              </h2>
+
+              {loadingPending ? (
+                <p className="text-gray-500">Loading applications...</p>
+              ) : pendingWholesalers.length === 0 ? (
+                <p className="text-gray-500 text-center py-12">
+                  No pending applications 🎉 All wholesalers are verified!
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingWholesalers.map((applicant) => (
+                    <div
+                      key={applicant._id}
+                      className="flex items-center justify-between p-6 bg-gray-50 rounded-xl border border-gray-200"
+                    >
+                      <div>
+                        <p className="text-lg font-semibold">
+                          {applicant.firstName} {applicant.lastName}
+                        </p>
+                        <p className="text-gray-600">{applicant.email}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          Applied on {new Date(applicant.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleApprove(applicant._id)}
+                          disabled={approving[applicant._id]}
+                          className="px-5 py-3 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 disabled:opacity-70 transition flex items-center gap-2"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                          {approving[applicant._id] ? "Approving..." : "Approve"}
+                        </button>
+
+                        <button
+                          onClick={() => handleReject(applicant._id)}
+                          className="px-5 py-3 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition flex items-center gap-2"
+                        >
+                          <XCircle className="w-5 h-5" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

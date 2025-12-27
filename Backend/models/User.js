@@ -5,7 +5,8 @@ const userSchema = new mongoose.Schema({
   lastName: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true },
-  role: { type: String, default: "user" }
+  role: { type: String, default: "user" },
+  verified:{type:Boolean,default:function(){return this.role !=="wholesaler";}}
 }, { timestamps: true });
 
 userSchema.virtual('fullName').get(function() {

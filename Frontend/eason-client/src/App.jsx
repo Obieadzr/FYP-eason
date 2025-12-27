@@ -2,36 +2,64 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
-import DashboardLayout from "./components/DashboardLayout.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import AddProduct from "./pages/dashboard/products/AddProducts.jsx";  // Fixed path (singular)
-import LandingPage from "./pages/LandingPage.jsx"
+import LandingPage from "./pages/LandingPage.jsx";
 import Marketplace from "./pages/retailer/marketplace.jsx";
+import ProductDetail from "./pages/retailer/ProductDetail.jsx"; // if you have this
+import PendingApproval from "./pages/PendingApproval.jsx";
+import Cart from "./pages/retailer/Cart.jsx";
+import DashboardLayout from "./components/DashboardLayout.jsx";
 import Home from "./pages/dashboard/Home.jsx";
 import Categories from "./pages/dashboard/Categories.jsx";
 import Units from "./pages/dashboard/Units.jsx";
 import Products from "./pages/dashboard/Products.jsx";
+import AddProduct from "./pages/dashboard/products/AddProducts.jsx";
+
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route 
-  path="/marketplace" 
-  element={
-    <ProtectedRoute>
-      <Marketplace />
-    </ProtectedRoute>
-  } 
-/>
-        {/* Protected Dashboard Routes */}
+
+        {/* Pending Approval */}
+        <Route path="/pending-approval" element={<PendingApproval />} />
+
+        {/* Marketplace - Shared by Retailer & Verified Wholesaler */}
+        <Route
+          path="/marketplace"
+          element={
+            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
+              <Marketplace />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
+        {/* Optional: Product Detail */}
+        <Route
+          path="/marketplace/product/:id"
+          element={
+            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
+              <ProductDetail />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Admin Dashboard - Only Admin */}
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Home />
               </DashboardLayout>
@@ -41,7 +69,7 @@ function App() {
         <Route
           path="/dashboard/categories"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Categories />
               </DashboardLayout>
@@ -51,7 +79,7 @@ function App() {
         <Route
           path="/dashboard/units"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Units />
               </DashboardLayout>
@@ -61,19 +89,17 @@ function App() {
         <Route
           path="/dashboard/products"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Products />
               </DashboardLayout>
             </ProtectedRoute>
           }
         />
-
-        {/* ADD PRODUCT ROUTE — ADDED HERE */}
         <Route
           path="/dashboard/products/add"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <AddProduct />
               </DashboardLayout>

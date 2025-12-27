@@ -1,10 +1,11 @@
 // src/pages/retailer/Marketplace.jsx
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag, User, ChevronDown } from "lucide-react"; // ChevronDown added
+import { Search, ShoppingBag, User, ChevronDown, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../utils/api";
 import ason2 from "../../assets/ason2.jpg";
+import { useCart } from "../../context/CartContext.jsx";
 
 export default function Marketplace() {
   const navigate = useNavigate();
@@ -12,8 +13,10 @@ export default function Marketplace() {
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("Newest"); // Added sort state
+  const [sortBy, setSortBy] = useState("Newest");
   const [loading, setLoading] = useState(true);
+
+  const { cartCount, addToCart, getAvailableStock } = useCart();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -22,7 +25,7 @@ export default function Marketplace() {
         setProducts(res.data || []);
         setFilteredProducts(res.data || []);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to fetch products:", err);
       } finally {
         setLoading(false);
       }
@@ -32,22 +35,32 @@ export default function Marketplace() {
 
   useEffect(() => {
     let filtered = [...products];
-    if (searchQuery) filtered = filtered.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (selectedCategory !== "All") filtered = filtered.filter(p => p.category?.name === selectedCategory);
 
-    // Sorting logic
-    if (sortBy === "Newest")
+    if (searchQuery) {
+      filtered = filtered.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter((p) => p.category?.name === selectedCategory);
+    }
+
+    // Sorting
+    if (sortBy === "Newest") {
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    if (sortBy === "Price Low to High")
+    } else if (sortBy === "Price Low to High") {
       filtered.sort((a, b) => a.price - b.price);
-    if (sortBy === "Price High to Low")
+    } else if (sortBy === "Price High to Low") {
       filtered.sort((a, b) => b.price - a.price);
+    }
 
     setFilteredProducts(filtered);
   }, [searchQuery, selectedCategory, sortBy, products]);
 
-  const categories = ["All", ...new Set(products.map(p => p.category?.name).filter(Boolean))];
-  const isNew = date => new Date(date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const categories = ["All", ...new Set(products.map((p) => p.category?.name).filter(Boolean))];
+
+  const isNew = (date) => new Date(date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   if (loading) {
     return (
@@ -61,7 +74,12 @@ export default function Marketplace() {
     <>
       <style jsx global>{`
         @import url("https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap");
-        html,body,*{font-family:"Satoshi",-apple-system,sans-serif;letter-spacing:-0.02em}
+        html,
+        body,
+        * {
+          font-family: "Satoshi", -apple-system, sans-serif;
+          letter-spacing: -0.02em;
+        }
       `}</style>
 
       {/* NAVBAR */}
@@ -86,11 +104,18 @@ export default function Marketplace() {
           </div>
 
           <div className="flex items-center gap-6">
-            <Search className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600" />
-            <User className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600" />
-            <div className="relative">
-              <ShoppingBag className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600" />
-              <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">3</span>
+            <Search className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
+            <User className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
+            <div
+              className="relative cursor-pointer"
+              onClick={() => navigate("/cart")}
+            >
+              <ShoppingBag className="w-5 h-5 text-gray-600 hover:text-emerald-600 transition" />
+              {cartCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-emerald-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold animate-pulse">
+                  {cartCount}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -98,20 +123,25 @@ export default function Marketplace() {
 
       <div className="h-32" />
 
-      {/* HERO */}
+      {/* HERO SECTION */}
       <section className="relative h-screen max-h-[720px] overflow-hidden bg-gradient-to-b from-[#fafafa] to-white">
         <img src={ason2} alt="Ason Market" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-white via-white/30 to-transparent pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
 
         <div className="absolute bottom-0 left-0 p-10 md:p-20 max-w-2xl">
-          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1.2 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2 }}
+          >
             <h1 className="text-7xl md:text-9xl font-light leading-none text-white">
               Ason<br />
               <span className="font-normal text-emerald-400">Rebuilt.</span>
             </h1>
             <p className="text-2xl md:text-4xl font-light mt-6 text-white/90">
-              The market never sleeps.<br />Now you don’t have to.
+              The market never sleeps.<br />
+              Now you don’t have to.
             </p>
           </motion.div>
         </div>
@@ -128,7 +158,7 @@ export default function Marketplace() {
                 type="text"
                 placeholder="Find items..."
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-12 pr-6 py-4 bg-white border border-gray-200 rounded-xl text-lg focus:outline-none focus:border-emerald-600 transition"
               />
             </div>
@@ -138,7 +168,7 @@ export default function Marketplace() {
             <div className="relative">
               <select
                 value={sortBy}
-                onChange={e => setSortBy(e.target.value)}
+                onChange={(e) => setSortBy(e.target.value)}
                 className="appearance-none bg-white border border-gray-200 rounded-xl px-6 py-4 pr-12 text-lg font-medium text-gray-900 focus:outline-none focus:border-emerald-600 cursor-pointer"
               >
                 <option>Newest</option>
@@ -151,18 +181,21 @@ export default function Marketplace() {
         </div>
       </div>
 
-      {/* CATEGORIES + PRODUCTS */}
-      <div className="max-w-7xl mx-auto px-6 pt-16">
+      {/* CATEGORIES + PRODUCTS GRID */}
+      <div className="max-w-7xl mx-auto px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-4 gap-12">
+          {/* Categories Sidebar */}
           <div className="lg:col-span-1">
             <p className="text-sm font-medium text-gray-600 mb-6">CATEGORIES</p>
             <div className="space-y-4">
-              {categories.map(cat => (
+              {categories.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`block text-left text-lg font-medium transition ${
-                    selectedCategory === cat ? "text-emerald-600" : "text-gray-700 hover:text-gray-900"
+                    selectedCategory === cat
+                      ? "text-emerald-600"
+                      : "text-gray-700 hover:text-gray-900"
                   }`}
                 >
                   {cat}
@@ -171,47 +204,89 @@ export default function Marketplace() {
             </div>
           </div>
 
+          {/* Products Grid */}
           <div className="lg:col-span-3">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
-              {filteredProducts.map((product, i) => (
-                <motion.div
-                  key={product._id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => navigate(`/retailer/product/${product._id}`)}
-                  className="cursor-pointer group"
-                >
-                  <div className="aspect-square bg-gray-100 rounded-2xl overflow-hidden mb-4 relative">
-                    {product.image ? (
-                      <img
-                        src={`http://localhost:5000${product.image}`}
-                        alt={product.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-200" />
-                    )}
-                    {isNew(product.createdAt) && (
-                      <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-3 py-1 rounded">
-                        NEW
-                      </div>
-                    )}
-                  </div>
+              {filteredProducts.map((product, i) => {
+                const availableStock = getAvailableStock(product._id, product.stock);
 
-                  <div className="space-y-1">
-                    <p className="text-xs text-gray-500 uppercase tracking-wider">
-                      {product.category?.name || "General"}
-                    </p>
-                    <h3 className="font-medium text-gray-900 line-clamp-2">
-                      {product.name}
-                    </h3>
-                    <p className="text-lg font-bold text-gray-900">
-                      Rs {product.price.toLocaleString()}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                return (
+                  <motion.div
+                    key={product._id}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group"
+                  >
+                    {/* Clickable Image */}
+                    <div
+                      className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4 relative cursor-pointer"
+                      onClick={() => navigate(`/marketplace/product/${product._id}`)}
+                    >
+                      {product.image ? (
+                        <img
+                          src={`http://localhost:5000${product.image}`}
+                          alt={product.name}
+                          className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-16 h-16 text-gray-300" />
+                        </div>
+                      )}
+                      {isNew(product.createdAt) && (
+                        <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-3 py-1 rounded">
+                          NEW
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500 uppercase tracking-wider">
+                        {product.category?.name || "General"}
+                      </p>
+
+                      <h3
+                        onClick={() => navigate(`/marketplace/product/${product._id}`)}
+                        className="font-medium text-gray-900 line-clamp-2 hover:text-emerald-600 transition cursor-pointer"
+                      >
+                        {product.name}
+                      </h3>
+
+                      <div className="flex items-center justify-between mt-4">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">
+                            Rs {product.price.toLocaleString()}
+                          </p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {availableStock > 10
+                              ? "In Stock"
+                              : availableStock > 0
+                              ? `Only ${availableStock} left`
+                              : "Out of Stock"}
+                          </p>
+                        </div>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(product);
+                          }}
+                          disabled={availableStock === 0}
+                          className={`px-5 py-3 rounded-xl font-semibold transition shadow-md ${
+                            availableStock === 0
+                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                              : "bg-gray-900 text-white hover:bg-black"
+                          }`}
+                        >
+                          {availableStock === 0 ? "Out of Stock" : "Add to cart"}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </div>
