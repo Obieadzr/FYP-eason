@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";       
 import Footer from "../components/Footer";
+// import { useAuthStore } from "../store/authStore";
 import {
   ArrowRight,
   Plus,
@@ -18,11 +19,12 @@ import nepalFlag from "../assets/nepal.png";
 import { useNavigate } from "react-router-dom";
 export default function LandingPage() {
   const navigate = useNavigate();
+  
   const benefits = [
     {
       icon: Timer,
       title: "Save 4–6 Hours Weekly",
-      desc: "No travel. No calls. Order in 20 seconds.",
+      desc: "No travel. No calls. Order in 20 seconds.", 
       color: "emerald",
     },
     {
@@ -641,8 +643,12 @@ export default function LandingPage() {
               <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition" />
             </button>
 
-            <button className="px-14 py-7 border-2 border-white/50 text-white rounded-full text-2xl font-medium hover:bg-white/10 backdrop-blur transition-all duration-300" onClick={()=>{navigate("/login")}}>
-              Start Selling
+           <button
+              className="group px-14 py-7 bg-white text-black rounded-full text-2xl font-medium hover:scale-105 transition-all duration-300 shadow-2xl flex items-center gap-4"
+              onClick={() => navigate("/marketplace")}
+            >
+              Browse & Buy Now
+              <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition" />
             </button>
           </motion.div>
 

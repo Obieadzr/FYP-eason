@@ -1,10 +1,13 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useAuthStore } from "./store/authStore";
+
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Marketplace from "./pages/retailer/marketplace.jsx";
-import ProductDetail from "./pages/retailer/ProductDetail.jsx"; // if you have this
+import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import PendingApproval from "./pages/PendingApproval.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
 import DashboardLayout from "./components/DashboardLayout.jsx";
@@ -17,45 +20,25 @@ import AddProduct from "./pages/dashboard/products/AddProducts.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 function App() {
+  const { checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth(); // Auto-check login status on every page load
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/marketplace/product/:id" element={<ProductDetail />} />
+        <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-
-        {/* Pending Approval */}
         <Route path="/pending-approval" element={<PendingApproval />} />
 
-        {/* Marketplace - Shared by Retailer & Verified Wholesaler */}
-        <Route
-          path="/marketplace"
-          element={
-            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
-              <Marketplace />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cart"
-          element={
-            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
-              <Cart />
-            </ProtectedRoute>
-          }
-        />
-        {/* Optional: Product Detail */}
-        <Route
-          path="/marketplace/product/:id"
-          element={
-            <ProtectedRoute allowedRoles={["retailer", "wholesaler"]}>
-              <ProductDetail />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Admin Dashboard - Only Admin */}
+        {/* Admin Dashboard – Protected */}
         <Route
           path="/dashboard"
           element={
@@ -104,6 +87,25 @@ function App() {
                 <AddProduct />
               </DashboardLayout>
             </ProtectedRoute>
+          }
+        />
+
+        {/* 404 */}
+        <Route
+          path="*"
+          element={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+              <div className="text-center p-8">
+                <h1 className="text-8xl font-bold text-gray-900 mb-4">404</h1>
+                <p className="text-2xl text-gray-600 mb-8">Page not found</p>
+                <Link
+                  to="/"
+                  className="inline-block px-10 py-5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition shadow-lg"
+                >
+                  Back to Home
+                </Link>
+              </div>
+            </div>
           }
         />
       </Routes>

@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import API from "../utils/api.js";
-import { useAuth } from "../context/AuthContext.jsx";
 import { Canvas } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere } from "@react-three/drei";
+import { useAuthStore } from "../store/authStore"; // ← NEW: Use Zustand here!
 
 const FiberBg = () => (
   <Canvas camera={{ position: [0, 0, 10], fov: 70 }}>
@@ -29,7 +29,8 @@ const FiberBg = () => (
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login: zustandLogin } = useAuthStore(); // ← Use Zustand's login
+
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -43,8 +44,9 @@ const Login = () => {
 
     try {
       const res = await API.post("/auth/login", { email, password });
-      
-      login(res.data.token, res.data.user);
+
+      // IMPORTANT: Use Zustand's login function!
+      zustandLogin(res.data.user); // ← This sets user in store + persists
 
       const { role, verified } = res.data.user;
 

@@ -1,16 +1,33 @@
 // src/pages/retailer/Marketplace.jsx
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Search, ShoppingBag, User, ChevronDown, Package } from "lucide-react";
+import Swal from "sweetalert2";
+import {
+  Search,
+  ShoppingBag,
+  User,
+  ChevronDown,
+  Package,
+  LogOut,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../utils/api";
 import ason2 from "../../assets/ason2.jpg";
 import { useCart } from "../../context/CartContext.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { useAuthStore } from "../../store/authStore.js";
+import toast from "react-hot-toast";
 
 export default function Marketplace() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout, loading: authLoading } = useAuthStore();
+
+  // Debug: See what's happening with user state
+  console.log("Marketplace DEBUG:", {
+    authLoading,
+    userExists: !!user,
+    userData: user ? `${user.fullName} (${user.role})` : "null",
+  });
+
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,14 +69,34 @@ export default function Marketplace() {
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (sortBy === "Price Low to High") {
       filtered.sort((a, b) => {
-        const aPrice = a.priceInfo?.purchasePrice || a.priceInfo?.finalPrice || a.wholesalerPrice || a.price || 0;
-        const bPrice = b.priceInfo?.purchasePrice || b.priceInfo?.finalPrice || b.wholesalerPrice || b.price || 0;
+        const aPrice =
+          a.priceInfo?.purchasePrice ||
+          a.priceInfo?.finalPrice ||
+          a.wholesalerPrice ||
+          a.price ||
+          0;
+        const bPrice =
+          b.priceInfo?.purchasePrice ||
+          b.priceInfo?.finalPrice ||
+          b.wholesalerPrice ||
+          b.price ||
+          0;
         return aPrice - bPrice;
       });
     } else if (sortBy === "Price High to Low") {
       filtered.sort((a, b) => {
-        const aPrice = a.priceInfo?.purchasePrice || a.priceInfo?.finalPrice || a.wholesalerPrice || a.price || 0;
-        const bPrice = b.priceInfo?.purchasePrice || b.priceInfo?.finalPrice || b.wholesalerPrice || b.price || 0;
+        const aPrice =
+          a.priceInfo?.purchasePrice ||
+          a.priceInfo?.finalPrice ||
+          a.wholesalerPrice ||
+          a.price ||
+          0;
+        const bPrice =
+          b.priceInfo?.purchasePrice ||
+          b.priceInfo?.finalPrice ||
+          b.wholesalerPrice ||
+          b.price ||
+          0;
         return bPrice - aPrice;
       });
     }
@@ -71,7 +108,6 @@ export default function Marketplace() {
 
   const isNew = (date) => new Date(date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-  // Safe price getters
   const getDisplayPrice = (product) => {
     const info = product.priceInfo || {};
     const legacy = product.price || product.wholesalerPrice || 0;
@@ -89,10 +125,40 @@ export default function Marketplace() {
   };
 
   const getSuggestedPrice = (product) => {
-    return product.priceInfo?.suggestedSellingPrice || Math.round((product.wholesalerPrice || product.price || 0) * 1.38);
+    return (
+      product.priceInfo?.suggestedSellingPrice ||
+      Math.round((product.wholesalerPrice || product.price || 0) * 1.38)
+    );
   };
 
-  if (loading) {
+  const handleLogout = () => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You will be logged out and redirected to the home page",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, logout",
+      cancelButtonText: "Cancel",
+      customClass: {
+        popup: "rounded-2xl border border-gray-200 shadow-2xl",
+        title: "text-gray-900 font-bold",
+        htmlContainer: "text-gray-600",
+        confirmButton: "rounded-xl px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white",
+        cancelButton: "rounded-xl px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800",
+      },
+      buttonsStyling: false,
+    }).then((result) => {
+      if (result.isConfirmed) {
+        logout();
+        toast.success("Logged out successfully!", { duration: 2000 });
+        navigate("/", { replace: true });
+      }
+    });
+  };
+
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin"></div>
@@ -136,6 +202,7 @@ export default function Marketplace() {
           <div className="flex items-center gap-6">
             <Search className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
             <User className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
+
             <div
               className="relative cursor-pointer"
               onClick={() => navigate("/cart")}
@@ -147,6 +214,18 @@ export default function Marketplace() {
                 </span>
               )}
             </div>
+
+            {/* Logout Button – ONLY when user is logged in */}
+            {user && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-xl transition font-medium"
+                title="Log out"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="hidden sm:inline">Logout</span>
+              </button>
+            )}
           </div>
         </div>
       </motion.nav>
@@ -275,12 +354,14 @@ export default function Marketplace() {
 
                       <div className="mt-4">
                         <p className="text-lg font-bold text-gray-900">
-                          {getPriceLabel()}: Rs {Number(getDisplayPrice(product)).toLocaleString() || "—"}
+                          {getPriceLabel()}: Rs{" "}
+                          {Number(getDisplayPrice(product)).toLocaleString() || "—"}
                         </p>
 
                         {user?.role === "retailer" && (
                           <p className="text-sm text-gray-600 mt-1">
-                            Suggested sell: Rs {Number(getSuggestedPrice(product)).toLocaleString()}
+                            Suggested sell: Rs{" "}
+                            {Number(getSuggestedPrice(product)).toLocaleString()}
                           </p>
                         )}
 

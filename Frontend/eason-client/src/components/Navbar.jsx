@@ -2,10 +2,17 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
+import { useAuthStore } from "../store/authStore";
 export default function Navbar() {
   const navigate = useNavigate();
-
+  const { isAuthenticated } = useAuthStore();
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate("/marketplace", { replace: true });
+    } else {
+      navigate("/register"); // or "/login" if you prefer
+    }
+  };
   return (
    
          <motion.nav
@@ -37,7 +44,7 @@ export default function Navbar() {
              </div>
              <button
                className="px-8 py-3 bg-emerald-600 text-white rounded-2xl font-semibold hover:bg-emerald-700 transition shadow-lg"
-               onClick={() => navigate("/register")}
+               onClick={handleGetStarted}
              >
                Get Started Free
              </button>

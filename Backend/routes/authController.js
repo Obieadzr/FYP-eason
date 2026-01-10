@@ -24,7 +24,25 @@ export const registerUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+export const getCurrentUser = async (req, res) => {
+  try {
+    // req.user is set by authMiddleware
+    if (!req.user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
 
+    // Fetch fresh user from DB (exclude password)
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (err) {
+    console.error("getCurrentUser error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;

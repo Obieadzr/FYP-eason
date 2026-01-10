@@ -1,7 +1,8 @@
 // src/components/DashboardLayout.jsx
 import { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+// import { useAuth } from "../context/AuthContext.jsx";
+import { useAuthStore } from "../store/authStore";
 import { LayoutDashboard, Package, Tags, Ruler, Search, Bell, Menu, LogOut, ChevronLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
@@ -36,7 +37,7 @@ const FiberBg = () => (
 );
 
 export default function DashboardLayout({ children }) {
-  const { user, logout } = useAuth();
+  const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -126,7 +127,8 @@ export default function DashboardLayout({ children }) {
                 <Bell className="w-6 h-6 text-gray-600" />
                 <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white"></span>
               </button>
-              <button onClick={() => { logout(); navigate("/login"); }} className="p-3 hover:bg-gray-100 rounded-2xl text-gray-600">
+              <button onClick={() => { logout();
+    navigate("/", { replace: true });}} className="p-3 hover:bg-gray-100 rounded-2xl text-gray-600">
                 <LogOut className="w-6 h-6" />
               </button>
             </div>
