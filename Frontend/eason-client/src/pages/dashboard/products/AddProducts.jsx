@@ -11,13 +11,14 @@ const AddProduct = () => {
   const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
-  const [imageFile, setImageFile] = useState(null); // actual file
+  const [imageFile, setImageFile] = useState(null);
 
   const [formData, setFormData] = useState({
     name: "",
     category: "",
     unit: "",
-    price: "",
+    baseCost: "",
+    wholesalerPrice: "",
     stock: "",
     description: "",
   });
@@ -49,42 +50,47 @@ const AddProduct = () => {
   };
 
   const handleSubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const data = new FormData();
-  data.append("name", formData.name);
-  data.append("category", formData.category);
-  data.append("unit", formData.unit);
-  data.append("price", formData.price);
-  data.append("stock", formData.stock || 0);
-  data.append("description", formData.description || "");
+    if (Number(formData.wholesalerPrice) < Number(formData.baseCost)) {
+      return toast.error("Wholesaler price cannot be less than base cost");
+    }
 
-  if (imageFile) {
-    data.append("image", imageFile);   // ← THIS LINE IS CRITICAL
-  }
+    const data = new FormData();
+    data.append("name", formData.name);
+    data.append("category", formData.category);
+    data.append("unit", formData.unit);
+    data.append("baseCost", formData.baseCost);
+    data.append("wholesalerPrice", formData.wholesalerPrice);
+    data.append("stock", formData.stock || 0);
+    data.append("description", formData.description || "");
 
-  try {
-    setLoading(true);
-    await API.post("/products", data);
-    toast.success("Product added with image!");
-    navigate("/dashboard/products");
-  } catch (err) {
-    console.log(err.response);
-    toast.error("Upload failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    if (imageFile) {
+      data.append("image", imageFile);
+    }
+
+    try {
+      setLoading(true);
+      await API.post("/products", data, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Product added successfully!");
+      navigate("/dashboard/products");
+    } catch (err) {
+      console.log(err.response?.data);
+      toast.error(err.response?.data?.message || "Failed to add product");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <Toaster />
       <div className="bg-white rounded-3xl shadow-xl p-10">
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-4xl font-black">Add New Product</h1>
-          <button
-            onClick={() => navigate("/dashboard/products")}
-            className="p-3 hover:bg-gray-100 rounded-2xl"
-          >
+          <button onClick={() => navigate("/dashboard/products")} className="p-3 hover:bg-gray-100 rounded-2xl">
             <X className="w-7 h-7" />
           </button>
         </div>
@@ -130,12 +136,28 @@ const AddProduct = () => {
               <div className="grid grid-cols-2 gap-6">
                 <input
                   type="number"
-                  placeholder="Price *"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="Base Cost (your cost) *"
+                  value={formData.baseCost}
+                  onChange={(e) => setFormData({ ...formData, baseCost: e.target.value })}
                   className="px-6 py-5 bg-gray-50 border border-gray-300 rounded-2xl"
                   required
+                  min="0"
+                  step="0.01"
                 />
+
+                <input
+                  type="number"
+                  placeholder="Wholesaler Price (selling to retailers) *"
+                  value={formData.wholesalerPrice}
+                  onChange={(e) => setFormData({ ...formData, wholesalerPrice: e.target.value })}
+                  className="px-6 py-5 bg-gray-50 border border-gray-300 rounded-2xl"
+                  required
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
                 <input
                   type="number"
                   placeholder="Stock"

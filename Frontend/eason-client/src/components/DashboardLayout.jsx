@@ -41,8 +41,12 @@ export default function DashboardLayout({ children }) {
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const isActive = (path) => location.pathname.startsWith(path) || (path === "/dashboard" && location.pathname === "/dashboard");
-
+ const isActive = (path) => {
+  if (path === "/dashboard") {
+    return location.pathname === "/dashboard"; 
+  }
+  return location.pathname.startsWith(path); 
+};
   return (
     <>
       <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap" rel="stylesheet" />
@@ -53,7 +57,7 @@ export default function DashboardLayout({ children }) {
         {/* Sidebar — Clean White Glass */}
         <aside className={`bg-white/90 backdrop-blur-3xl border-r border-white/50 shadow-2xl flex flex-col transition-all duration-500 ${sidebarCollapsed ? "w-20" : "w-80"}`}>
           <div className="h-20 px-8 flex items-center justify-between border-b border-gray-100">
-            {!sidebarCollapsed && (
+            {!sidebarCollapsed && ( 
                 <motion.h1
                         onClick={() => navigate("/")}
                         className="text-2xl font-bold text-gray-900 cursor-pointer hover:opacity-80 transition"

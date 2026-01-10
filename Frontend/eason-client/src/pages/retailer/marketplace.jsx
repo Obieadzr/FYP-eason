@@ -6,9 +6,11 @@ import { useNavigate } from "react-router-dom";
 import API from "../../utils/api";
 import ason2 from "../../assets/ason2.jpg";
 import { useCart } from "../../context/CartContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function Marketplace() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -46,13 +48,20 @@ export default function Marketplace() {
       filtered = filtered.filter((p) => p.category?.name === selectedCategory);
     }
 
-    // Sorting
     if (sortBy === "Newest") {
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     } else if (sortBy === "Price Low to High") {
-      filtered.sort((a, b) => a.price - b.price);
+      filtered.sort((a, b) => {
+        const aPrice = a.priceInfo?.purchasePrice || a.priceInfo?.finalPrice || a.wholesalerPrice || a.price || 0;
+        const bPrice = b.priceInfo?.purchasePrice || b.priceInfo?.finalPrice || b.wholesalerPrice || b.price || 0;
+        return aPrice - bPrice;
+      });
     } else if (sortBy === "Price High to Low") {
-      filtered.sort((a, b) => b.price - a.price);
+      filtered.sort((a, b) => {
+        const aPrice = a.priceInfo?.purchasePrice || a.priceInfo?.finalPrice || a.wholesalerPrice || a.price || 0;
+        const bPrice = b.priceInfo?.purchasePrice || b.priceInfo?.finalPrice || b.wholesalerPrice || b.price || 0;
+        return bPrice - aPrice;
+      });
     }
 
     setFilteredProducts(filtered);
@@ -61,6 +70,27 @@ export default function Marketplace() {
   const categories = ["All", ...new Set(products.map((p) => p.category?.name).filter(Boolean))];
 
   const isNew = (date) => new Date(date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  // Safe price getters
+  const getDisplayPrice = (product) => {
+    const info = product.priceInfo || {};
+    const legacy = product.price || product.wholesalerPrice || 0;
+    if (!user) return info.finalPrice || legacy;
+    if (user.role === "retailer") return info.purchasePrice || legacy;
+    if (user.role === "wholesaler") return info.sellingPrice || legacy;
+    return info.finalPrice || legacy;
+  };
+
+  const getPriceLabel = () => {
+    if (!user) return "Price";
+    if (user.role === "retailer") return "Your Buy Price";
+    if (user.role === "wholesaler") return "Your Sell Price";
+    return "Price";
+  };
+
+  const getSuggestedPrice = (product) => {
+    return product.priceInfo?.suggestedSellingPrice || Math.round((product.wholesalerPrice || product.price || 0) * 1.38);
+  };
 
   if (loading) {
     return (
@@ -123,7 +153,7 @@ export default function Marketplace() {
 
       <div className="h-32" />
 
-      {/* HERO SECTION */}
+      {/* HERO */}
       <section className="relative h-screen max-h-[720px] overflow-hidden bg-gradient-to-b from-[#fafafa] to-white">
         <img src={ason2} alt="Ason Market" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-white via-white/30 to-transparent pointer-events-none" />
@@ -181,10 +211,9 @@ export default function Marketplace() {
         </div>
       </div>
 
-      {/* CATEGORIES + PRODUCTS GRID */}
+      {/* CATEGORIES + GRID */}
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-4 gap-12">
-          {/* Categories Sidebar */}
           <div className="lg:col-span-1">
             <p className="text-sm font-medium text-gray-600 mb-6">CATEGORIES</p>
             <div className="space-y-4">
@@ -193,9 +222,7 @@ export default function Marketplace() {
                   key={cat}
                   onClick={() => setSelectedCategory(cat)}
                   className={`block text-left text-lg font-medium transition ${
-                    selectedCategory === cat
-                      ? "text-emerald-600"
-                      : "text-gray-700 hover:text-gray-900"
+                    selectedCategory === cat ? "text-emerald-600" : "text-gray-700 hover:text-gray-900"
                   }`}
                 >
                   {cat}
@@ -204,7 +231,6 @@ export default function Marketplace() {
             </div>
           </div>
 
-          {/* Products Grid */}
           <div className="lg:col-span-3">
             <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
               {filteredProducts.map((product, i) => {
@@ -216,13 +242,10 @@ export default function Marketplace() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="group"
+                    className="group cursor-pointer"
+                    onClick={() => navigate(`/marketplace/product/${product._id}`)}
                   >
-                    {/* Clickable Image */}
-                    <div
-                      className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4 relative cursor-pointer"
-                      onClick={() => navigate(`/marketplace/product/${product._id}`)}
-                    >
+                    <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4 relative">
                       {product.image ? (
                         <img
                           src={`http://localhost:5000${product.image}`}
@@ -241,48 +264,49 @@ export default function Marketplace() {
                       )}
                     </div>
 
-                    {/* Product Info */}
                     <div className="space-y-2">
                       <p className="text-xs text-gray-500 uppercase tracking-wider">
                         {product.category?.name || "General"}
                       </p>
 
-                      <h3
-                        onClick={() => navigate(`/marketplace/product/${product._id}`)}
-                        className="font-medium text-gray-900 line-clamp-2 hover:text-emerald-600 transition cursor-pointer"
-                      >
+                      <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600 transition">
                         {product.name}
                       </h3>
 
-                      <div className="flex items-center justify-between mt-4">
-                        <div>
-                          <p className="text-lg font-bold text-gray-900">
-                            Rs {product.price.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {availableStock > 10
-                              ? "In Stock"
-                              : availableStock > 0
-                              ? `Only ${availableStock} left`
-                              : "Out of Stock"}
-                          </p>
-                        </div>
+                      <div className="mt-4">
+                        <p className="text-lg font-bold text-gray-900">
+                          {getPriceLabel()}: Rs {Number(getDisplayPrice(product)).toLocaleString() || "—"}
+                        </p>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            addToCart(product);
-                          }}
-                          disabled={availableStock === 0}
-                          className={`px-5 py-3 rounded-xl font-semibold transition shadow-md ${
-                            availableStock === 0
-                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                              : "bg-gray-900 text-white hover:bg-black"
-                          }`}
-                        >
-                          {availableStock === 0 ? "Out of Stock" : "Add to cart"}
-                        </button>
+                        {user?.role === "retailer" && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            Suggested sell: Rs {Number(getSuggestedPrice(product)).toLocaleString()}
+                          </p>
+                        )}
+
+                        <p className="text-sm text-gray-600 mt-1">
+                          {availableStock > 10
+                            ? "In Stock"
+                            : availableStock > 0
+                            ? `Only ${availableStock} left`
+                            : "Out of Stock"}
+                        </p>
                       </div>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(product);
+                        }}
+                        disabled={availableStock === 0}
+                        className={`mt-3 w-full py-2 px-4 rounded-xl font-medium transition ${
+                          availableStock === 0
+                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                            : "bg-gray-900 text-white hover:bg-black"
+                        }`}
+                      >
+                        {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
+                      </button>
                     </div>
                   </motion.div>
                 );

@@ -4,10 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Minus, Package } from "lucide-react";
 import API from "../../utils/api";
 import { useCart } from "../../context/CartContext.jsx";
+import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState("");
@@ -48,13 +50,32 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
-    // Optional: show success toast or redirect to cart
+  };
+
+  // Safe price helpers
+  const getDisplayPrice = () => {
+    const info = product.priceInfo || {};
+    const legacy = product.price || product.wholesalerPrice || 0;
+    if (!user) return info.finalPrice || legacy;
+    if (user.role === "retailer") return info.purchasePrice || legacy;
+    if (user.role === "wholesaler") return info.sellingPrice || legacy;
+    return info.finalPrice || legacy;
+  };
+
+  const getPriceLabel = () => {
+    if (!user) return "Price";
+    if (user.role === "retailer") return "Your Purchase Price";
+    if (user.role === "wholesaler") return "Your Selling Price";
+    return "Price";
+  };
+
+  const getSuggestedPrice = () => {
+    return product.priceInfo?.suggestedSellingPrice || Math.round((product.wholesalerPrice || product.price || 0) * 1.38);
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-3 text-gray-600 hover:text-gray-900 mb-8 transition"
@@ -64,9 +85,8 @@ export default function ProductDetail() {
         </button>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Left: Images */}
+          {/* Images */}
           <div className="space-y-6">
-            {/* Main Image */}
             <div className="aspect-square bg-white rounded-3xl overflow-hidden shadow-xl">
               <img
                 src={selectedImage || `http://localhost:5000${product.image}`}
@@ -75,7 +95,6 @@ export default function ProductDetail() {
               />
             </div>
 
-            {/* Thumbnail Gallery - For now, show main image only (you can add more later) */}
             <div className="grid grid-cols-4 gap-4">
               <div
                 className={`aspect-square bg-white rounded-2xl overflow-hidden cursor-pointer border-2 transition ${
@@ -89,35 +108,45 @@ export default function ProductDetail() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              {/* Add more thumbnails if you have multiple images later */}
-              <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
-                <Package className="w-12 h-12 text-gray-300" />
-              </div>
-              <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
-                <Package className="w-12 h-12 text-gray-300" />
-              </div>
-              <div className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
-                <Package className="w-12 h-12 text-gray-300" />
-              </div>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="aspect-square bg-gray-100 rounded-2xl flex items-center justify-center">
+                  <Package className="w-12 h-12 text-gray-300" />
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Right: Details */}
+          {/* Details */}
           <div className="space-y-8">
             <div>
               <p className="text-sm text-gray-500 uppercase tracking-wider mb-2">
                 {product.category?.name || "General"}
               </p>
               <h1 className="text-4xl font-bold text-gray-900 mb-4">{product.name}</h1>
-              <p className="text-3xl font-bold text-emerald-600">
-                Rs {product.price.toLocaleString()}
-              </p>
+
+              {/* Price */}
+              <div className="text-3xl font-bold text-emerald-600">
+                {getPriceLabel()}: Rs {Number(getDisplayPrice()).toLocaleString() || "—"}
+              </div>
+
+              {/* Retailer suggestion */}
+              {user?.role === "retailer" && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Suggested selling price: Rs {Number(getSuggestedPrice()).toLocaleString()}
+                  <br />
+                  <span className="text-xs text-gray-500">(override available in future updates)</span>
+                </p>
+              )}
             </div>
 
-            {/* Stock Info */}
+            {/* Stock */}
             <div className="flex items-center gap-3">
               <Package className="w-5 h-5 text-gray-600" />
-              <p className={`font-medium ${product.stock > 10 ? "text-gray-700" : product.stock > 0 ? "text-orange-600" : "text-red-600"}`}>
+              <p
+                className={`font-medium ${
+                  product.stock > 10 ? "text-gray-700" : product.stock > 0 ? "text-orange-600" : "text-red-600"
+                }`}
+              >
                 {product.stock > 10
                   ? "In Stock"
                   : product.stock > 0
@@ -126,36 +155,39 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-6">
-              <p className="text-lg font-medium text-gray-900">Quantity</p>
-              <div className="flex items-center border border-gray-300 rounded-xl">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-3 hover:bg-gray-100 rounded-l-xl transition"
-                  disabled={product.stock === 0}
-                >
-                  <Minus className="w-5 h-5" />
-                </button>
-                <span className="px-8 py-3 font-semibold text-lg">{quantity}</span>
-                <button
-                  onClick={() => setQuantity(Math.min(product.stock || 10, quantity + 1))}
-                  className="p-3 hover:bg-gray-100 rounded-r-xl transition"
-                  disabled={product.stock === 0}
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
+            {/* Quantity + Cart (hide for wholesaler if needed) */}
+            {user?.role !== "wholesaler" && (
+              <>
+                <div className="flex items-center gap-6">
+                  <p className="text-lg font-medium text-gray-900">Quantity</p>
+                  <div className="flex items-center border border-gray-300 rounded-xl">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="p-3 hover:bg-gray-100 rounded-l-xl transition"
+                      disabled={product.stock === 0}
+                    >
+                      <Minus className="w-5 h-5" />
+                    </button>
+                    <span className="px-8 py-3 font-semibold text-lg">{quantity}</span>
+                    <button
+                      onClick={() => setQuantity(Math.min(product.stock || 10, quantity + 1))}
+                      className="p-3 hover:bg-gray-100 rounded-r-xl transition"
+                      disabled={product.stock === 0}
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
 
-            {/* Add to Cart Button */}
-            <button
-              onClick={handleAddToCart}
-              disabled={product.stock === 0}
-              className="w-full py-5 bg-emerald-600 text-white text-xl font-bold rounded-2xl hover:bg-emerald-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-            </button>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={product.stock === 0}
+                  className="w-full py-5 bg-emerald-600 text-white text-xl font-bold rounded-2xl hover:bg-emerald-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                </button>
+              </>
+            )}
 
             {/* Description */}
             {product.description && (

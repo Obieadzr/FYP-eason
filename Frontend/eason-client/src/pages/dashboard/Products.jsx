@@ -26,19 +26,22 @@ const Products = () => {
     fetchProducts();
   }, []);
 
-  const filteredProducts = products.filter(p =>
+  const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
     p.category?.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const formatNPR = (amount) => `Rs. ${amount.toLocaleString("en-IN")}`;
+  const formatNPR = (amount) => {
+    if (amount === undefined || amount === null) return "—";
+    return `Rs. ${Number(amount).toLocaleString("en-IN")}`;
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this product permanently?")) return;
     try {
       await API.delete(`/products/${id}`);
       toast.success("Product deleted");
-      setProducts(prev => prev.filter(p => p._id !== id));
+      setProducts((prev) => prev.filter((p) => p._id !== id));
     } catch {
       toast.error("Delete failed");
     }
@@ -49,7 +52,6 @@ const Products = () => {
       <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
       <div className="min-h-screen bg-gray-50">
-
         {/* Header */}
         <div className="bg-white border-b border-gray-200 px-8 py-10">
           <div className="flex items-center justify-between">
@@ -95,7 +97,8 @@ const Products = () => {
                   <tr className="border-b border-gray-200 bg-gray-50/50">
                     <th className="text-left px-8 py-5 font-semibold text-gray-900">Product</th>
                     <th className="text-left px-8 py-5 font-semibold text-gray-900">Category</th>
-                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Price</th>
+                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Wholesale Price</th>
+                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Suggested Retail</th>
                     <th className="text-left px-8 py-5 font-semibold text-gray-900">Stock</th>
                     <th className="text-right px-8 py-5 font-semibold text-gray-900">Actions</th>
                   </tr>
@@ -131,9 +134,18 @@ const Products = () => {
                         <span className="text-gray-700 font-medium">{p.category?.name || "—"}</span>
                       </td>
 
-                      {/* Price */}
+                      {/* Wholesale Price (what retailers pay) */}
                       <td className="px-8 py-6">
-                        <span className="text-xl font-black text-gray-900">{formatNPR(p.price)}</span>
+                        <span className="text-xl font-black text-gray-900">
+                          {formatNPR(p.priceInfo?.purchasePrice || p.wholesalerPrice)}
+                        </span>
+                      </td>
+
+                      {/* Suggested Retail Price */}
+                      <td className="px-8 py-6">
+                        <span className="text-xl font-black text-emerald-600">
+                          {formatNPR(p.priceInfo?.suggestedSellingPrice || p.suggestedRetailPrice)}
+                        </span>
                       </td>
 
                       {/* Stock */}
@@ -183,7 +195,7 @@ const Products = () => {
   );
 };
 
-// Skeleton
+// Skeleton (unchanged)
 const TableSkeleton = () => (
   <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
     {[...Array(6)].map((_, i) => (
@@ -200,7 +212,7 @@ const TableSkeleton = () => (
   </div>
 );
 
-// Empty State
+// Empty State (unchanged)
 const EmptyState = () => (
   <div className="text-center py-32">
     <div className="w-32 h-32 mx-auto bg-gray-100 rounded-3xl flex items-center justify-center mb-8">

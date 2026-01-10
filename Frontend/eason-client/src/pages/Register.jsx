@@ -138,12 +138,22 @@ const Register = () => {
               />
 
               <select
-                name="role" value={formData.role} onChange={handleChange}
-                className="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-emerald-500/50 focus:bg-white/10 transition text-base"
-              >
-                <option value="retailer">Retailer</option>
-                <option value="wholesaler">Wholesaler</option>
-              </select>
+  name="role"
+  value={formData.role}
+  onChange={handleChange}
+  className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-xl text-white 
+             focus:outline-none focus:border-emerald-500/70 focus:bg-white/15 
+             transition text-base appearance-none"
+  style={{
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 20 20'%3E%3Cpath d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 1rem center",
+    backgroundSize: "1.5em"
+  }}
+>
+  <option value="retailer" className="bg-gray-900 text-white">Retailer</option>
+  <option value="wholesaler" className="bg-gray-900 text-white">Wholesaler</option>
+</select>
 
               <div className="relative">
                 <input
