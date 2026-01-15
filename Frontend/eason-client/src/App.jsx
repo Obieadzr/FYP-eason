@@ -8,6 +8,7 @@ import Register from "./pages/Register.jsx";
 import Marketplace from "./pages/retailer/marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
+import Orders from "./pages/retailer/Orders.jsx"; // ← added
 import PendingApproval from "./pages/PendingApproval.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 
@@ -37,6 +38,7 @@ function App() {
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/marketplace/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/orders" element={<Orders />} /> {/* ← added */}
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />
 

@@ -10,11 +10,9 @@ API.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-
   if (config.data instanceof FormData) {
     delete config.headers["Content-Type"];
   }
-
   return config;
 });
 
@@ -22,10 +20,9 @@ API.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
-      console.warn("401 → clearing eason_token");
+      console.warn("401 Unauthorized → clearing token & redirecting");
       localStorage.removeItem("eason_token");
-      // Optional auto-redirect (uncomment if you want):
-      // window.location.href = "/login";
+      window.location.href = "/login?session_expired=true"; // Auto redirect
     }
     return Promise.reject(err);
   }

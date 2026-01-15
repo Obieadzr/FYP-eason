@@ -44,6 +44,7 @@ export default function Marketplace() {
         setFilteredProducts(res.data || []);
       } catch (err) {
         console.error("Failed to fetch products:", err);
+        toast.error("Failed to load products");
       } finally {
         setLoading(false);
       }
@@ -159,8 +160,9 @@ export default function Marketplace() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="w-16 h-16 border-4 border-gray-200 border-t-emerald-600 rounded-full animate-spin mb-6"></div>
+        <p className="text-lg text-gray-600">Loading products...</p>
       </div>
     );
   }
@@ -202,6 +204,7 @@ export default function Marketplace() {
             <Search className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
             <User className="w-5 h-5 text-gray-600 cursor-pointer hover:text-emerald-600 transition" />
 
+            {/* Cart */}
             <div
               className="relative cursor-pointer"
               onClick={() => navigate("/cart")}
@@ -213,6 +216,16 @@ export default function Marketplace() {
                 </span>
               )}
             </div>
+
+            {/* My Orders link - visible only for retailers */}
+            {user && user.role === "retailer" && (
+              <button
+                onClick={() => navigate("/orders")}
+                className="text-sm font-medium text-gray-700 hover:text-emerald-600 transition"
+              >
+                My Orders
+              </button>
+            )}
 
             {user && (
               <button
@@ -288,7 +301,7 @@ export default function Marketplace() {
         </div>
       </div>
 
-      {/* CATEGORIES + GRID */}
+      {/* CATEGORIES + GRID with Loading Skeleton */}
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-4 gap-12">
           <div className="lg:col-span-1">
@@ -309,141 +322,156 @@ export default function Marketplace() {
           </div>
 
           <div className="lg:col-span-3">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
-              {filteredProducts.map((product, i) => {
-                const availableStock = getAvailableStock(product._id, product.stock);
+            {loading ? (
+              // Loading Skeleton Grid
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="animate-pulse">
+                    <div className="aspect-square bg-gray-200 rounded-2xl mb-4"></div>
+                    <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div className="h-10 bg-gray-200 rounded mt-4"></div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
+                {filteredProducts.map((product, i) => {
+                  const availableStock = getAvailableStock(product._id, product.stock);
 
-                return (
-                  <motion.div
-                    key={product._id}
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="group cursor-pointer"
-                    onClick={() => navigate(`/marketplace/product/${product._id}`)}
-                  >
-                    <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4 relative">
-                      {product.image ? (
-                        <img
-                          src={`http://localhost:5000${product.image}`}
-                          alt={product.name}
-                          className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-16 h-16 text-gray-300" />
-                        </div>
-                      )}
-                      {isNew(product.createdAt) && (
-                        <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-3 py-1 rounded">
-                          NEW
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs text-gray-500 uppercase tracking-wider">
-                        {product.category?.name || "General"}
-                      </p>
-
-                      <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600 transition">
-                        {product.name}
-                      </h3>
-
-                      <div className="mt-4">
-                        <p className="text-lg font-bold text-gray-900">
-                          {getPriceLabel()}: Rs{" "}
-                          {Number(getDisplayPrice(product)).toLocaleString() || "—"}
-                        </p>
-
-                        {user?.role === "retailer" && (
-                          <p className="text-sm text-gray-600 mt-1">
-                            Suggested sell: Rs{" "}
-                            {Number(getSuggestedPrice(product)).toLocaleString()}
-                          </p>
+                  return (
+                    <motion.div
+                      key={product._id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                      className="group cursor-pointer"
+                      onClick={() => navigate(`/marketplace/product/${product._id}`)}
+                    >
+                      <div className="aspect-square bg-gray-50 rounded-2xl overflow-hidden mb-4 relative">
+                        {product.image ? (
+                          <img
+                            src={`http://localhost:5000${product.image}`}
+                            alt={product.name}
+                            className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-16 h-16 text-gray-300" />
+                          </div>
                         )}
+                        {isNew(product.createdAt) && (
+                          <div className="absolute top-4 left-4 bg-black text-white text-xs font-bold px-3 py-1 rounded">
+                            NEW
+                          </div>
+                        )}
+                      </div>
 
-                        <p className="text-sm text-gray-600 mt-1">
-                          {availableStock > 10
-                            ? "In Stock"
-                            : availableStock > 0
-                            ? `Only ${availableStock} left`
-                            : "Out of Stock"}
+                      <div className="space-y-2">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider">
+                          {product.category?.name || "General"}
                         </p>
-                      </div>
 
-                      {/* Two Buttons with Login Prompt */}
-                      <div className="grid grid-cols-2 gap-3 mt-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!user) {
-                              Swal.fire({
-                                title: "Login Required",
-                                text: "Please login or register to add items to cart",
-                                icon: "warning",
-                                showCancelButton: true,
-                                confirmButtonColor: "#10b981",
-                                cancelButtonColor: "#6b7280",
-                                confirmButtonText: "Go to Register",
-                                cancelButtonText: "Cancel",
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  navigate("/register");
-                                }
-                              });
-                              return;
-                            }
-                            addToCart(product);
-                          }}
-                          disabled={availableStock === 0}
-                          className={`py-2 px-4 rounded-xl font-medium transition ${
-                            availableStock === 0
-                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                              : "bg-gray-900 text-white hover:bg-black"
-                          }`}
-                        >
-                          {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
-                        </button>
+                        <h3 className="font-medium text-gray-900 line-clamp-2 group-hover:text-emerald-600 transition">
+                          {product.name}
+                        </h3>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!user) {
-                              Swal.fire({
-                                title: "Login Required",
-                                text: "Please login or register to buy now",
-                                icon: "warning",
-                                showCancelButton: true,
-                                confirmButtonColor: "#10b981",
-                                cancelButtonColor: "#6b7280",
-                                confirmButtonText: "Go to Register",
-                                cancelButtonText: "Cancel",
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  navigate("/register");
-                                }
-                              });
-                              return;
-                            }
-                            addToCart(product);
-                            navigate("/cart");
-                          }}
-                          disabled={availableStock === 0}
-                          className={`py-2 px-4 rounded-xl font-medium transition ${
-                            availableStock === 0
-                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                              : "bg-emerald-600 text-white hover:bg-emerald-700"
-                          }`}
-                        >
-                          {availableStock === 0 ? "Out of Stock" : "Buy Now"}
-                        </button>
+                        <div className="mt-4">
+                          <p className="text-lg font-bold text-gray-900">
+                            {getPriceLabel()}: Rs{" "}
+                            {Number(getDisplayPrice(product)).toLocaleString() || "—"}
+                          </p>
+
+                          {user?.role === "retailer" && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              Suggested sell: Rs{" "}
+                              {Number(getSuggestedPrice(product)).toLocaleString()}
+                            </p>
+                          )}
+
+                          <p className="text-sm text-gray-600 mt-1">
+                            {availableStock > 10
+                              ? "In Stock"
+                              : availableStock > 0
+                              ? `Only ${availableStock} left`
+                              : "Out of Stock"}
+                          </p>
+                        </div>
+
+                        {/* Two Buttons with Login Prompt */}
+                        <div className="grid grid-cols-2 gap-3 mt-4">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!user) {
+                                Swal.fire({
+                                  title: "Login Required",
+                                  text: "Please login or register to add items to cart",
+                                  icon: "warning",
+                                  showCancelButton: true,
+                                  confirmButtonColor: "#10b981",
+                                  cancelButtonColor: "#6b7280",
+                                  confirmButtonText: "Go to Register",
+                                  cancelButtonText: "Cancel",
+                                }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    navigate("/register");
+                                  }
+                                });
+                                return;
+                              }
+                              addToCart(product);
+                            }}
+                            disabled={availableStock === 0}
+                            className={`py-2 px-4 rounded-xl font-medium transition ${
+                              availableStock === 0
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-gray-900 text-white hover:bg-black"
+                            }`}
+                          >
+                            {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (!user) {
+                                Swal.fire({
+                                  title: "Login Required",
+                                  text: "Please login or register to buy now",
+                                  icon: "warning",
+                                  showCancelButton: true,
+                                  confirmButtonColor: "#10b981",
+                                  cancelButtonColor: "#6b7280",
+                                  confirmButtonText: "Go to Register",
+                                  cancelButtonText: "Cancel",
+                                }).then((result) => {
+                                  if (result.isConfirmed) {
+                                    navigate("/register");
+                                  }
+                                });
+                                return;
+                              }
+                              addToCart(product);
+                              navigate("/cart");
+                            }}
+                            disabled={availableStock === 0}
+                            className={`py-2 px-4 rounded-xl font-medium transition ${
+                              availableStock === 0
+                                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                : "bg-emerald-600 text-white hover:bg-emerald-700"
+                            }`}
+                          >
+                            {availableStock === 0 ? "Out of Stock" : "Buy Now"}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

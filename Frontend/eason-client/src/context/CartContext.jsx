@@ -11,11 +11,12 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const { user } = useAuthStore();
+  const { user, loading: authLoading, isAuthenticated } = useAuthStore();
   const [cart, setCart] = useState([]);
   const [stockMap, setStockMap] = useState({});
   const toastId = useRef(null);
 
+  // Load from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem("eason_cart");
     const savedStock = localStorage.getItem("eason_stock");
@@ -23,22 +24,26 @@ export const CartProvider = ({ children }) => {
     if (savedStock) setStockMap(JSON.parse(savedStock));
   }, []);
 
+  // Save cart whenever it changes
   useEffect(() => {
     localStorage.setItem("eason_cart", JSON.stringify(cart));
   }, [cart]);
 
+  // Save stock map whenever it changes
   useEffect(() => {
     localStorage.setItem("eason_stock", JSON.stringify(stockMap));
   }, [stockMap]);
 
+  // Clear cart ONLY on explicit logout (after auth loading finished)
   useEffect(() => {
-    if (!user) {
+    if (!authLoading && user === null && !isAuthenticated) {
+      console.log("[Cart] Explicit logout detected → clearing cart");
       setCart([]);
       setStockMap({});
       localStorage.removeItem("eason_cart");
       localStorage.removeItem("eason_stock");
     }
-  }, [user]);
+  }, [user, authLoading, isAuthenticated]);
 
   const getPriceForUser = (product) => {
     const info = product.priceInfo || {};
@@ -54,106 +59,157 @@ export const CartProvider = ({ children }) => {
     if (toastId.current) toast.dismiss(toastId.current);
 
     if (!user) {
-      toast.error("Please login to add items", { duration: 4000 });
+      toast.error("Please login to add items to cart", { duration: 4000 });
       return;
     }
 
     if (user.role === "wholesaler") {
-      toast.error("Wholesalers cannot use retail cart yet", { duration: 5000 });
+      toast.error("Wholesalers cannot add items to the retail cart at this time", {
+        duration: 5000,
+      });
       return;
     }
 
     if (user.role !== "retailer") {
-      toast.error("Only retailers can shop here", { duration: 4000 });
+      toast.error("Only retailers can shop in the marketplace right now", {
+        duration: 4000,
+      });
       return;
     }
 
     const price = getPriceForUser(product);
     if (price <= 0) {
-      toast.error("Price unavailable for your role", { duration: 4000 });
+      toast.error("Price not available for your role", { duration: 4000 });
       return;
     }
 
     const currentStock = stockMap[product._id] ?? product.stock ?? 0;
-    const alreadyInCart = cart.find(i => i._id === product._id)?.quantity || 0;
-    const requested = alreadyInCart + quantity;
+    const alreadyInCart = cart.find((item) => item._id === product._id)?.quantity || 0;
+    const requestedTotal = alreadyInCart + quantity;
 
-    if (requested > currentStock) {
-      toast.error(`Only ${currentStock} available (${alreadyInCart} in cart)`, { duration: 4500 });
+    if (requestedTotal > currentStock) {
+      toast.error(
+        `Only ${currentStock} available! (${alreadyInCart} already in cart)`,
+        { duration: 4500 }
+      );
       return;
     }
 
-    setCart(prev => {
-      const existing = prev.find(i => i._id === product._id);
-      const msg = existing ? `Updated ${product.name}` : `Added ${product.name}`;
-      toastId.current = toast.success(msg, { duration: 2800 });
+    setCart((prev) => {
+      const existing = prev.find((item) => item._id === product._id);
+      let message = existing
+        ? `Updated: ${product.name} × ${quantity}`
+        : `Added: ${product.name}`;
+
+      toastId.current = toast.success(message, { duration: 2800 });
 
       if (existing) {
-        return prev.map(i =>
-          i._id === product._id
-            ? { ...i, quantity: i.quantity + quantity, total: price * (i.quantity + quantity) }
-            : i
+        return prev.map((item) =>
+          item._id === product._id
+            ? {
+                ...item,
+                quantity: item.quantity + quantity,
+                total: price * (item.quantity + quantity),
+              }
+            : item
         );
       }
-      return [...prev, { ...product, quantity, pricePerUnit: price, total: price * quantity }];
+
+      return [
+        ...prev,
+        {
+          ...product,
+          quantity,
+          pricePerUnit: price,
+          total: price * quantity,
+        },
+      ];
     });
 
-    setStockMap(prev => ({
+    setStockMap((prev) => ({
       ...prev,
       [product._id]: currentStock - quantity,
     }));
   };
 
   const updateQuantity = (id, newQuantity) => {
-    if (newQuantity <= 0) return removeFromCart(id);
-
-    const item = cart.find(i => i._id === id);
-    if (!item) return;
-
-    const origStock = item.stock ?? 9999;
-    const avail = stockMap[id] ?? origStock;
-    const currInCart = cart.filter(i => i._id === id).reduce((s, i) => s + i.quantity, 0);
-    const newTotal = currInCart - item.quantity + newQuantity;
-
-    if (newTotal > origStock) {
-      toast.error(`Cannot exceed stock (${origStock})`, { duration: 4000 });
+    if (newQuantity <= 0) {
+      removeFromCart(id);
       return;
     }
 
-    setCart(prev =>
-      prev.map(i =>
-        i._id === id ? { ...i, quantity: newQuantity, total: i.pricePerUnit * newQuantity } : i
+    const item = cart.find((i) => i._id === id);
+    if (!item) return;
+
+    const originalStock = item.stock ?? 9999;
+    const currentAvailable = stockMap[id] ?? originalStock;
+    const currentInCart = cart
+      .filter((i) => i._id === id)
+      .reduce((sum, i) => sum + i.quantity, 0);
+
+    const newTotalInCart = currentInCart - item.quantity + newQuantity;
+
+    if (newTotalInCart > originalStock) {
+      toast.error(`Cannot exceed available stock (${originalStock})`, {
+        duration: 4000,
+      });
+      return;
+    }
+
+    setCart((prev) =>
+      prev.map((item) =>
+        item._id === id
+          ? {
+              ...item,
+              quantity: newQuantity,
+              total: item.pricePerUnit * newQuantity,
+            }
+          : item
       )
     );
 
-    setStockMap(prev => ({ ...prev, [id]: origStock - newTotal }));
+    setStockMap((prev) => ({
+      ...prev,
+      [id]: originalStock - newTotalInCart,
+    }));
   };
 
   const removeFromCart = (id) => {
-    const item = cart.find(i => i._id === id);
+    const item = cart.find((i) => i._id === id);
     if (!item) return;
 
-    toastId.current = toast.success(`Removed ${item.name}`, { duration: 2200 });
+    toastId.current = toast.success(`Removed: ${item.name}`, {
+      duration: 2200,
+    });
 
-    const origStock = item.stock ?? 9999;
-    const wasQty = item.quantity;
+    const originalStock = item.stock ?? 9999;
+    const wasInCart = item.quantity;
 
-    setCart(prev => prev.filter(i => i._id !== id));
-    setStockMap(prev => ({ ...prev, [id]: (prev[id] ?? origStock) + wasQty }));
+    setCart((prev) => prev.filter((i) => i._id !== id));
+
+    setStockMap((prev) => ({
+      ...prev,
+      [id]: (prev[id] ?? originalStock) + wasInCart,
+    }));
   };
 
   const clearCart = () => {
-    cart.forEach(item => {
-      setStockMap(prev => ({ ...prev, [item._id]: item.stock ?? 9999 }));
+    cart.forEach((item) => {
+      setStockMap((prev) => ({
+        ...prev,
+        [item._id]: item.stock ?? 9999,
+      }));
     });
     setCart([]);
-    toast.success("Cart cleared");
+    toast.success("Cart cleared", { duration: 2000 });
   };
 
-  const getAvailableStock = (id, orig) => stockMap[id] ?? orig ?? 0;
+  const getAvailableStock = (productId, originalStock) => {
+    return stockMap[productId] ?? originalStock ?? 0;
+  };
 
-  const cartTotal = cart.reduce((sum, i) => sum + (i.total || 0), 0);
-  const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + (item.total || 0), 0);
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <CartContext.Provider
