@@ -1,6 +1,6 @@
-// src/store/authStore.js
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import API from '../utils/api';
 
 export const useAuthStore = create(
   persist(
@@ -9,44 +9,60 @@ export const useAuthStore = create(
       isAuthenticated: false,
       loading: true,
 
-      login: (userData) => set({ user: userData, isAuthenticated: true, loading: false }),
+      login: (userData) => {
+        console.log("[authStore] LOGIN →", userData);
+        set({
+          user: userData,
+          isAuthenticated: true,
+          loading: false,
+        });
+      },
 
-      logout: async () => {
-        try {
-          await fetch('http://localhost:5000/api/auth/logout', {
-            method: 'POST',
-            credentials: 'include',
-          });
-        } catch (err) {
-          console.error('Logout failed:', err);
-        }
-        set({ user: null, isAuthenticated: false, loading: false });
+      logout: () => {
+        console.log("[authStore] LOGOUT");
+        localStorage.removeItem("eason_token");
+        set({
+          user: null,
+          isAuthenticated: false,
+          loading: false,
+        });
       },
 
       checkAuth: async () => {
-        try {
-          set({ loading: true });
-          const res = await fetch('http://localhost:5000/api/auth/me', {
-            credentials: 'include', // sends the httpOnly cookie
-          });
+        set({ loading: true });
+        const token = localStorage.getItem("eason_token");
 
-          if (res.ok) {
-            const data = await res.json();
-            set({ user: data.user, isAuthenticated: true });
-          } else {
-            set({ user: null, isAuthenticated: false });
-          }
+        if (!token) {
+          console.log("[checkAuth] No token");
+          set({ user: null, isAuthenticated: false, loading: false });
+          return;
+        }
+
+        try {
+          const res = await API.get("/auth/me");
+          console.log("[checkAuth] Success:", res.data.user);
+          set({
+            user: res.data.user,
+            isAuthenticated: true,
+            loading: false,
+          });
         } catch (err) {
-          console.error('Auth check failed:', err);
-          set({ user: null, isAuthenticated: false });
-        } finally {
-          set({ loading: false });
+          console.warn("[checkAuth] Failed:", err.message);
+          localStorage.removeItem("eason_token");
+          set({
+            user: null,
+            isAuthenticated: false,
+            loading: false,
+          });
         }
       },
     }),
     {
-      name: 'eason-auth-storage',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      name: "eason-auth",
+      partialize: (state) => ({
+        user: state.user,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

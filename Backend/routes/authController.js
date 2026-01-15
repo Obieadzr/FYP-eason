@@ -1,72 +1,117 @@
+// backend/controllers/authController.js
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// Register new user
 export const registerUser = async (req, res) => {
   try {
     console.log("Register request body:", req.body);
 
     const { firstName, lastName, email, password, role } = req.body;
 
+    // Check if user already exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) 
+    if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
+    }
 
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ firstName, lastName, email, password: hashedPassword, role });
+
+    // Create new user
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role: role || "retailer", // default to retailer if not specified
+    });
 
     const savedUser = await newUser.save();
     console.log("User saved:", savedUser);
 
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ 
+      message: "User registered successfully",
+      user: {
+        id: savedUser._id,
+        fullName: `${savedUser.firstName} ${savedUser.lastName}`,
+        email: savedUser.email,
+        role: savedUser.role,
+        verified: savedUser.verified
+      }
+    });
   } catch (error) {
     console.error("Error in registerUser:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// Login user
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" } // 1 day expiry
+    );
+
+    // Send token + user data (without password)
+    res.status(200).json({
+      token,
+      user: {
+        id: user._id,
+        fullName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+        verified: user.verified
+      }
+    });
+  } catch (error) {
+    console.error("Error in loginUser:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Get current authenticated user (/api/auth/me)
 export const getCurrentUser = async (req, res) => {
   try {
-    // req.user is set by authMiddleware
-    if (!req.user) {
+    // req.user comes from authMiddleware
+    if (!req.user?.id) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    // Fetch fresh user from DB (exclude password)
     const user = await User.findById(req.user.id).select("-password");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({ user });
+    res.status(200).json({
+      user: {
+        id: user._id,
+        fullName: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role,
+        verified: user.verified
+      }
+    });
   } catch (err) {
     console.error("getCurrentUser error:", err);
     res.status(500).json({ message: "Server error" });
-  }
-};
-export const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-
-    if (!user) return res.status(404).json({ message: "User not found" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
-
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
-
-    res.status(200).json({ 
-  token, 
-  user: { 
-    id: user._id, 
-    fullName: user.fullName, 
-    role: user.role ,
-    verified: user.verified
-  } 
-});
-
-  } catch (error) {
-    console.error("Error in loginUser:", error);
-    res.status(500).json({ error: error.message });
   }
 };

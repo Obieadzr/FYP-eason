@@ -4,12 +4,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Minus, Package } from "lucide-react";
 import API from "../../utils/api";
 import { useCart } from "../../context/CartContext.jsx";
-import { useAuth } from "../../context/AuthContext.jsx";
+import { useAuthStore } from "../../store/authStore.js"; // ← Fixed to Zustand
 
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useAuthStore(); // ← Use Zustand (not old AuthContext)
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState("");
@@ -50,6 +50,11 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
+  };
+
+  const handleBuyNow = () => {
+    addToCart(product, quantity);
+    navigate("/cart");
   };
 
   // Safe price helpers
@@ -155,7 +160,7 @@ export default function ProductDetail() {
               </p>
             </div>
 
-            {/* Quantity + Cart (hide for wholesaler if needed) */}
+            {/* Quantity + Cart + Buy Now (hide for wholesaler) */}
             {user?.role !== "wholesaler" && (
               <>
                 <div className="flex items-center gap-6">
@@ -179,13 +184,23 @@ export default function ProductDetail() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleAddToCart}
-                  disabled={product.stock === 0}
-                  className="w-full py-5 bg-emerald-600 text-white text-xl font-bold rounded-2xl hover:bg-emerald-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
-                </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={product.stock === 0}
+                    className="w-full py-5 bg-gray-900 text-white text-xl font-bold rounded-2xl hover:bg-black transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {product.stock === 0 ? "Out of Stock" : "Add to Cart"}
+                  </button>
+
+                  <button
+                    onClick={handleBuyNow}
+                    disabled={product.stock === 0}
+                    className="w-full py-5 bg-emerald-600 text-white text-xl font-bold rounded-2xl hover:bg-emerald-700 transition shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    {product.stock === 0 ? "Out of Stock" : "Buy Now"}
+                  </button>
+                </div>
               </>
             )}
 

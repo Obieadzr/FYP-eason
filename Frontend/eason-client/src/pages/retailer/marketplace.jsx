@@ -21,7 +21,6 @@ export default function Marketplace() {
   const navigate = useNavigate();
   const { user, logout, loading: authLoading } = useAuthStore();
 
-  // Debug: See what's happening with user state
   console.log("Marketplace DEBUG:", {
     authLoading,
     userExists: !!user,
@@ -215,7 +214,6 @@ export default function Marketplace() {
               )}
             </div>
 
-            {/* Logout Button – ONLY when user is logged in */}
             {user && (
               <button
                 onClick={handleLogout}
@@ -374,20 +372,73 @@ export default function Marketplace() {
                         </p>
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addToCart(product);
-                        }}
-                        disabled={availableStock === 0}
-                        className={`mt-3 w-full py-2 px-4 rounded-xl font-medium transition ${
-                          availableStock === 0
-                            ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                            : "bg-gray-900 text-white hover:bg-black"
-                        }`}
-                      >
-                        {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
-                      </button>
+                      {/* Two Buttons with Login Prompt */}
+                      <div className="grid grid-cols-2 gap-3 mt-4">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!user) {
+                              Swal.fire({
+                                title: "Login Required",
+                                text: "Please login or register to add items to cart",
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#10b981",
+                                cancelButtonColor: "#6b7280",
+                                confirmButtonText: "Go to Register",
+                                cancelButtonText: "Cancel",
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  navigate("/register");
+                                }
+                              });
+                              return;
+                            }
+                            addToCart(product);
+                          }}
+                          disabled={availableStock === 0}
+                          className={`py-2 px-4 rounded-xl font-medium transition ${
+                            availableStock === 0
+                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                              : "bg-gray-900 text-white hover:bg-black"
+                          }`}
+                        >
+                          {availableStock === 0 ? "Out of Stock" : "Add to Cart"}
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!user) {
+                              Swal.fire({
+                                title: "Login Required",
+                                text: "Please login or register to buy now",
+                                icon: "warning",
+                                showCancelButton: true,
+                                confirmButtonColor: "#10b981",
+                                cancelButtonColor: "#6b7280",
+                                confirmButtonText: "Go to Register",
+                                cancelButtonText: "Cancel",
+                              }).then((result) => {
+                                if (result.isConfirmed) {
+                                  navigate("/register");
+                                }
+                              });
+                              return;
+                            }
+                            addToCart(product);
+                            navigate("/cart");
+                          }}
+                          disabled={availableStock === 0}
+                          className={`py-2 px-4 rounded-xl font-medium transition ${
+                            availableStock === 0
+                              ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                              : "bg-emerald-600 text-white hover:bg-emerald-700"
+                          }`}
+                        >
+                          {availableStock === 0 ? "Out of Stock" : "Buy Now"}
+                        </button>
+                      </div>
                     </div>
                   </motion.div>
                 );

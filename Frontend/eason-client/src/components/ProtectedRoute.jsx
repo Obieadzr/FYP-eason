@@ -1,41 +1,39 @@
-// src/components/ProtectedRoute.jsx
-import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
+import { useAuthStore } from "../store/authStore";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, allowedRoles = [] }) => {
+  const { user, loading } = useAuthStore();
   const location = useLocation();
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-10 h-10 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Verifying session...</p>
+        </div>
       </div>
     );
   }
 
-  // Not logged in → redirect to login
-  if (!user) {
+  if (!user || !user.role) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Role restriction: only allow if role matches
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // Redirect based on current user role
-    if (user.role === "admin") {
-      return <Navigate to="/dashboard" replace />;
-    }
-    // Retailer or wholesaler → marketplace
-    return <Navigate to="/marketplace" replace />;
-  }
+  const role = user.role.trim().toLowerCase();
 
-  // Wholesaler not verified → pending page
-  if (user.role === "wholesaler" && user.verified === false) {
+  if (role === "wholesaler" && user.verified === false) {
     return <Navigate to="/pending-approval" replace />;
   }
 
-  // All checks passed → show the page
+  if (allowedRoles.length > 0) {
+    const allowed = allowedRoles.map(r => r.toLowerCase().trim());
+    if (!allowed.includes(role)) {
+      const redirect = role === "retailer" ? "/marketplace" : "/";
+      return <Navigate to={redirect} replace />;
+    }
+  }
+
   return children;
 };
 
