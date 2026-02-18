@@ -1,22 +1,22 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/authStore";
-import { useNavigate } from "react-router-dom";
-// Public pages
+
+// Pages
 import LandingPage from "./pages/LandingPage.jsx";
 import Login from "./pages/Login.jsx";
 import Register from "./pages/Register.jsx";
-import Marketplace from "./pages/retailer/marketplace.jsx";
+import Marketplace from "./pages/retailer/Marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
 import Orders from "./pages/retailer/Orders.jsx";
 import PendingApproval from "./pages/PendingApproval.jsx";
 import OrderSuccess from "./pages/OrderSuccess.jsx";
 
-// Wholesaler: Add product from marketplace
+// Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
 
-// Admin Dashboard (admin only)
+// Dashboard
 import DashboardLayout from "./components/DashboardLayout.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -28,7 +28,7 @@ import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx"; //
 
 function App() {
   const { checkAuth } = useAuthStore();
-  // const navigate = useNavigate();
+
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
@@ -36,7 +36,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Public Routes */}
+        {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -47,17 +47,17 @@ function App() {
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />
 
-        {/* Wholesaler-only: Add product from marketplace */}
+        {/* Protected: Add Product (both admin + wholesaler) */}
         <Route
           path="/add-product"
           element={
-            <ProtectedRoute allowedRoles={["wholesaler"]}>
+            <ProtectedRoute allowedRoles={["admin", "wholesaler"]}>
               <AddProduct />
             </ProtectedRoute>
           }
         />
 
-        {/* Admin-only Dashboard Routes */}
+        {/* Admin Dashboard */}
         <Route
           path="/dashboard"
           element={
@@ -109,7 +109,7 @@ function App() {
           }
         />
 
-        {/* 404 - Catch-all */}
+        {/* 404 */}
         <Route
           path="*"
           element={
