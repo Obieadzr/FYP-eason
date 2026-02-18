@@ -1,7 +1,8 @@
-// backend/controllers/authController.js
+// backend/routes/authController.js
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import zxcvbn from "zxcvbn"; // ← NEW: password strength checker
 
 export const registerUser = async (req, res) => {
   try {
@@ -9,6 +10,26 @@ export const registerUser = async (req, res) => {
 
     const { firstName, lastName, email, password, role } = req.body;
 
+    // Basic required fields check
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // ── NEW: Password strength validation ───────────────────────────────────────
+    if (password.length < 8) {
+      return res.status(400).json({
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    const strength = zxcvbn(password);
+    if (strength.score < 3) {
+      return res.status(400).json({
+        message:
+          "Password is too weak. Please use a stronger password with a mix of letters, numbers, and symbols (or longer length).",
+      });
+    }
+    // ──────────────────────────────────────────────────────────────────────────────
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -23,20 +44,21 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
       role: role || "retailer", // default to retailer if not specified
+      verified: (role || "retailer") === "wholesaler" ? false : true,
     });
 
     const savedUser = await newUser.save();
     console.log("User saved:", savedUser);
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: "User registered successfully",
       user: {
         id: savedUser._id,
         fullName: `${savedUser.firstName} ${savedUser.lastName}`,
         email: savedUser.email,
         role: savedUser.role,
-        verified: savedUser.verified
-      }
+        verified: savedUser.verified,
+      },
     });
   } catch (error) {
     console.error("Error in registerUser:", error);
@@ -61,7 +83,7 @@ export const loginUser = async (req, res) => {
     const token = jwt.sign(
       { id: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" } 
+      { expiresIn: "7d" }
     );
 
     // Send token + user data (without password)
@@ -72,8 +94,8 @@ export const loginUser = async (req, res) => {
         fullName: `${user.firstName} ${user.lastName}`,
         email: user.email,
         role: user.role,
-        verified: user.verified
-      }
+        verified: user.verified,
+      },
     });
   } catch (error) {
     console.error("Error in loginUser:", error);
@@ -100,8 +122,8 @@ export const getCurrentUser = async (req, res) => {
         fullName: `${user.firstName} ${user.lastName}`,
         email: user.email,
         role: user.role,
-        verified: user.verified
-      }
+        verified: user.verified,
+      },
     });
   } catch (err) {
     console.error("getCurrentUser error:", err);

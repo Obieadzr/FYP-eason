@@ -1,136 +1,121 @@
+// backend/routes/orderRoutes.js
 import express from "express";
 import Order from "../models/Order.js";
-import Product from "../models/Product.js";
+import User from "../models/User.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { createOrder } from "./orderController.js";
+import { sendOrderStatusUpdate } from "../utils/email.js";
 
 const router = express.Router();
 
-// POST /api/orders - Create new order (retailer)
-router.post("/", authMiddleware, async (req, res) => {
-  try {
-    const { items, shippingAddress, phone, notes } = req.body;
-    const userId = req.user.id;
+// POST /api/orders - Place new order (Cash on Delivery)
+router.post("/", authMiddleware, createOrder);
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: "Cart is empty or invalid" });
-    }
-
-    if (!shippingAddress?.trim() || !phone?.trim()) {
-      return res.status(400).json({ message: "Shipping address and phone are required" });
-    }
-
-    const orderItems = [];
-    let totalAmount = 0;
-
-    for (const cartItem of items) {
-      const product = await Product.findById(cartItem._id);
-      if (!product) {
-        return res.status(404).json({ message: `Product not found: ${cartItem._id}` });
-      }
-
-      if (product.stock < cartItem.quantity) {
-        return res.status(400).json({
-          message: `Insufficient stock for "${product.name}". Only ${product.stock} available.`,
-        });
-      }
-
-      const priceAtOrderTime = product.wholesalerPrice;
-
-      orderItems.push({
-        product: product._id,
-        quantity: cartItem.quantity,
-        pricePerUnit: priceAtOrderTime,
-      });
-
-      totalAmount += priceAtOrderTime * cartItem.quantity;
-    }
-
-    const order = new Order({
-      user: userId,
-      items: orderItems,
-      totalAmount,
-      shippingAddress,
-      phone,
-      notes: notes || "",
-      status: "pending",
-      paymentStatus: "pending",
-    });
-
-    await order.save();
-
-    // Decrease stock
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.quantity },
-      });
-    }
-
-    res.status(201).json({
-      message: "Order created successfully",
-      order: {
-        _id: order._id,
-        totalAmount: order.totalAmount,
-        status: order.status,
-        createdAt: order.createdAt,
-      },
-    });
-  } catch (err) {
-    console.error("Order creation failed:", err);
-    res.status(500).json({ message: "Failed to create order", error: err.message });
-  }
-});
-
-// GET /api/orders/my-orders - Retailer: Get my orders
+// GET /api/orders/my-orders - Get current user's orders
 router.get("/my-orders", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id })
       .sort({ createdAt: -1 })
       .populate("items.product", "name image wholesalerPrice");
-    res.json(orders);
+
+    res.json({
+      success: true,
+      orders,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch orders" });
+    console.error("Failed to fetch user orders:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch your orders",
+      error: err.message,
+    });
   }
 });
 
-// GET /api/orders - Admin/Wholesaler: Get all orders
+// GET /api/orders - Get all orders (Admin & Wholesaler only)
 router.get("/", authMiddleware, async (req, res) => {
   if (!["admin", "wholesaler"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized. Admin or Wholesaler only.",
+    });
   }
 
   try {
     const orders = await Order.find()
       .populate("user", "firstName lastName email")
       .sort({ createdAt: -1 });
-    res.json(orders);
+
+    res.json({
+      success: true,
+      orders,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to fetch orders" });
+    console.error("Failed to fetch all orders:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
+      error: err.message,
+    });
   }
 });
 
-// PUT /api/orders/:id/status - Update order status (admin/wholesaler)
+// PUT /api/orders/:id/status - Update order status
 router.put("/:id/status", authMiddleware, async (req, res) => {
   if (!["admin", "wholesaler"].includes(req.user.role)) {
-    return res.status(403).json({ message: "Not authorized" });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized. Admin or Wholesaler only.",
+    });
   }
 
   const { status } = req.body;
+
   if (!["pending", "processing", "shipped", "delivered", "cancelled"].includes(status)) {
-    return res.status(400).json({ message: "Invalid status" });
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status value",
+    });
   }
 
   try {
     const order = await Order.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true, runValidators: true }
     ).populate("user", "firstName lastName email");
 
-    if (!order) return res.status(404).json({ message: "Order not found" });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
 
-    res.json(order);
+    // Send status update email
+    try {
+      if (order.user?.email) {
+        const emailSent = await sendOrderStatusUpdate(order, order.user, status);
+        if (emailSent) {
+          console.log(`Status update email sent to ${order.user.email} for order ${order._id}`);
+        }
+      }
+    } catch (emailErr) {
+      console.error("Status email failed (non-critical):", emailErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: `Order status updated to ${status}`,
+      order,
+    });
   } catch (err) {
-    res.status(500).json({ message: "Failed to update status" });
+    console.error("Failed to update order status:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order status",
+      error: err.message,
+    });
   }
 });
 

@@ -1,3 +1,4 @@
+// src/components/ProtectedRoute.jsx
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
@@ -23,10 +24,21 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   const role = user.role.trim().toLowerCase();
 
-  if (role === "wholesaler" && user.verified === false) {
+  // Wholesaler not verified → pending approval
+  if (role === "wholesaler" && !user.verified) {
     return <Navigate to="/pending-approval" replace />;
   }
 
+  // Admin-only routes (dashboard, admin panel, etc.)
+  if (location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/admin")) {
+    if (role !== "admin") {
+      // Redirect to appropriate page
+      const redirect = role === "retailer" ? "/marketplace" : "/";
+      return <Navigate to={redirect} replace />;
+    }
+  }
+
+  // General role check for other protected routes
   if (allowedRoles.length > 0) {
     const allowed = allowedRoles.map(r => r.toLowerCase().trim());
     if (!allowed.includes(role)) {

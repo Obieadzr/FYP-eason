@@ -11,7 +11,7 @@ import {
 
 const router = express.Router();
 
-router.post("/", upload.single("image"), createProduct);
+router.post("/", upload.array("images", 8), createProduct);
 router.put("/:id", upload.single("image"), updateProduct);
 
 router.get("/", getProducts);

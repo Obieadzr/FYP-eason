@@ -29,12 +29,6 @@ const productSchema = new mongoose.Schema(
     wholesalerPrice: {
       type: Number,
       required: [true, "Wholesaler price is required"],
-    //   min: [
-    //     function () {
-    //       return this.baseCost;
-    //     },
-    //     "Wholesaler price must be at least equal to base cost",
-    //   ],
     },
 
     retailerPriceOverride: {
@@ -85,40 +79,47 @@ productSchema.virtual("consumerPrice").get(function () {
 
 // Helper method to return price info based on user role
 productSchema.methods.getPriceForUser = function (user) {
+  let info = {};
+
   if (!user) {
     // Guest / Consumer
-    return {
+    info = {
       finalPrice: this.consumerPrice,
       roleShownAs: "consumer",
     };
-  }
-
-  if (user.role === "wholesaler") {
-    return {
+  } else if (user.role === "wholesaler") {
+    info = {
       sellingPrice: this.wholesalerPrice,
-      baseCost: this.baseCost,
+      baseCost: this.baseCost, // only wholesaler sees cost
       roleShownAs: "wholesaler",
     };
-  }
-
-  if (user.role === "retailer") {
-    return {
+  } else if (user.role === "retailer") {
+    info = {
       purchasePrice: this.wholesalerPrice,
       suggestedSellingPrice: this.suggestedRetailPrice,
       currentSellingPrice: this.retailerPriceOverride || null,
       roleShownAs: "retailer",
     };
+    // STRICT: Never expose baseCost to retailer
+    delete info.baseCost;
+  } else {
+    // Admin sees everything
+    info = {
+      baseCost: this.baseCost,
+      wholesalerPrice: this.wholesalerPrice,
+      suggestedRetailPrice: this.suggestedRetailPrice,
+      retailerPriceOverride: this.retailerPriceOverride,
+      consumerPrice: this.consumerPrice,
+      roleShownAs: "admin",
+    };
   }
 
-  // Admin sees everything
-  return {
-    baseCost: this.baseCost,
-    wholesalerPrice: this.wholesalerPrice,
-    suggestedRetailPrice: this.suggestedRetailPrice,
-    retailerPriceOverride: this.retailerPriceOverride,
-    consumerPrice: this.consumerPrice,
-    roleShownAs: "admin",
-  };
+  // Final safety net: remove baseCost for anyone except admin & wholesaler
+  if (user?.role !== "admin" && user?.role !== "wholesaler") {
+    delete info.baseCost;
+  }
+
+  return info;
 };
 
 // Export as default (matches your other models)

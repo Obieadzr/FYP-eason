@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Package,
   LogOut,
+  Plus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../utils/api";
@@ -267,7 +268,7 @@ export default function Marketplace() {
         </div>
       </section>
 
-      {/* SEARCH + SORT */}
+      {/* SEARCH + SORT + WHOLESALER ADD BUTTON */}
       <div className="max-w-7xl mx-auto px-6 pt-20">
         <div className="flex flex-col lg:flex-row gap-8 items-start lg:items-center justify-between">
           <div className="w-full lg:w-auto">
@@ -284,7 +285,7 @@ export default function Marketplace() {
             </div>
           </div>
 
-          <div className="w-full lg:w-auto">
+          <div className="w-full lg:w-auto flex flex-col sm:flex-row gap-4 items-start sm:items-center">
             <div className="relative">
               <select
                 value={sortBy}
@@ -297,11 +298,21 @@ export default function Marketplace() {
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none" />
             </div>
+
+            {/* Wholesaler-only Add Product button */}
+            {user && user.role === "wholesaler" && user.verified && (
+              <button
+                onClick={() => navigate("/add-product")}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 shadow-md transition whitespace-nowrap"
+              >
+                <Plus size={20} /> Add Product
+              </button>
+            )}
           </div>
         </div>
       </div>
 
-      {/* CATEGORIES + GRID with Loading Skeleton */}
+      {/* CATEGORIES + GRID */}
       <div className="max-w-7xl mx-auto px-6 pt-16 pb-20">
         <div className="grid lg:grid-cols-4 gap-12">
           <div className="lg:col-span-1">
@@ -323,7 +334,6 @@ export default function Marketplace() {
 
           <div className="lg:col-span-3">
             {loading ? (
-              // Loading Skeleton Grid
               <div className="grid grid-cols-2 md:grid-cols-3 gap-10">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="animate-pulse">

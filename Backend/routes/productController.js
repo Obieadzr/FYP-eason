@@ -26,17 +26,20 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const product = await Product.create({
+    let imagePaths = [];
+    if (req.files && req.files.length > 0) {
+      imagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    }
+   const product = await Product.create({
       name: name.trim(),
       category,
       unit,
-      baseCost: baseCostNum,
-      wholesalerPrice: wholesalerPriceNum,
+      baseCost: Number(baseCost),
+      wholesalerPrice: Number(wholesalerPrice),
       stock: Number(stock) || 0,
       description: description?.trim() || "",
-      image: imagePath,
+      image: imagePaths.length > 0 ? imagePaths[0] : null,   // keep first as main image (or change model)
+      // If you want to store all: images: imagePaths,
     });
 
     const populated = await Product.findById(product._id)
