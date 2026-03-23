@@ -1,8 +1,8 @@
 import React from "react";
 import { motion } from "framer-motion";
-import Navbar from "../components/Navbar";       
-import Footer from "../components/Footer";
-// import { useAuthStore } from "../store/authStore";
+import Navbar from "../../components/layout/Navbar";
+import Footer from "../../components/layout/Footer";
+// import { useAuthStore } from "../../store/authStore";
 import {
   ArrowRight,
   Plus,
@@ -15,7 +15,7 @@ import {
   Warehouse,
   ShoppingBag,
 } from "lucide-react";
-import nepalFlag from "../assets/nepal.png";
+import nepalFlag from "../../assets/nepal.png";
 import { useNavigate } from "react-router-dom";
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -49,17 +49,10 @@ export default function LandingPage() {
 
   return (
     <>
-      <style jsx global>{`
-        @import url("https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap");
-        @import url("https://rsms.me/inter/inter.css");
-
-        html,
-        body,
-        * {
-          font-family: "Satoshi", "Geist", "Inter", -apple-system,
-            BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          letter-spacing: -0.02em;
-          font-feature-settings: "cv11", "ss01";
+      <style>{`
+        *, *::before, *::after {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          letter-spacing: -0.01em;
         }
       `}</style>
   
@@ -71,7 +64,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-16 items-center">
           <div className="max-w-lg">
             <div className="text-emerald-600 text-sm font-medium tracking-widest uppercase mb-8">
-              Nepal’s wholesale platform
+              Wholesale, rebuilt
             </div>
             <h1 className="text-7xl lg:text-8xl font-light tracking-tight text-gray-900 leading-none">
               eAson

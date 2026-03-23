@@ -1,6 +1,5 @@
-// src/pages/dashboard/Home.jsx
 import React, { useEffect, useState } from "react";
-import { useAuthStore } from "../../store/authStore"; // ← NEW - correct import
+import { useAuthStore } from "../../store/authStore";
 import API from "../../utils/api";
 import {
   Package,
@@ -18,7 +17,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 
 const Home = () => {
-  const { user } = useAuthStore(); // ← switched to Zustand
+  const { user } = useAuthStore();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({

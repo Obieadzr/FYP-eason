@@ -4,7 +4,7 @@ import {
   getUnits,
   updateUnit,
   deleteUnit,
-} from "./unitController.js"
+} from "../controllers/unitController.js"
 
 const router = express.Router();
 

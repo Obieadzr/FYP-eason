@@ -50,6 +50,11 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    moq: {
+      type: Number,
+      default: 1,
+      min: 1,
+    },
     description: {
       type: String,
       trim: true,

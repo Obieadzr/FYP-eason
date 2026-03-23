@@ -130,3 +130,43 @@ export const getCurrentUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const updateProfile = async (req, res) => {
+  try {
+    const { firstName, lastName, phone, shopName, panNumber, address, businessType } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (firstName) user.firstName = firstName;
+    if (lastName) user.lastName = lastName;
+    if (phone) user.phone = phone;
+    if (shopName) user.shopName = shopName;
+    if (panNumber) user.panNumber = panNumber;
+    if (address) user.address = address;
+    if (businessType) user.businessType = businessType;
+
+    await user.save();
+    res.status(200).json({ message: "Profile updated", user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updatePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Incorrect current password" });
+
+    if (newPassword.length < 8) return res.status(400).json({ message: "Password must be at least 8 chars" });
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};

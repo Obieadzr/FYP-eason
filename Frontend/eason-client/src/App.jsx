@@ -3,28 +3,32 @@ import { useEffect } from "react";
 import { useAuthStore } from "./store/authStore";
 
 // Pages
-import LandingPage from "./pages/LandingPage.jsx";
-import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
+import LandingPage from "./pages/public/LandingPage.jsx";
+import Login from "./pages/auth/Login.jsx";
+import Register from "./pages/auth/Register.jsx";
 import Marketplace from "./pages/retailer/Marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
 import Orders from "./pages/retailer/Orders.jsx";
-import PendingApproval from "./pages/PendingApproval.jsx";
-import OrderSuccess from "./pages/OrderSuccess.jsx";
+import PendingApproval from "./pages/auth/PendingApproval.jsx";
+import OrderSuccess from "./pages/orders/OrderSuccess.jsx";
+import OrderKanban from "./pages/orders/OrderKanban.jsx";
+import Settings from "./pages/auth/Settings.jsx";
 
 // Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
+import WholesalerDashboard from "./pages/wholesaler/WholesalerDashboard.jsx";
 
 // Dashboard
-import DashboardLayout from "./components/DashboardLayout.jsx";
-import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import DashboardLayout from "./components/layout/DashboardLayout.jsx";
+import ProtectedRoute from "./components/routes/ProtectedRoute.jsx";
 
 import Home from "./pages/dashboard/Home.jsx";
 import Categories from "./pages/dashboard/Categories.jsx";
 import Units from "./pages/dashboard/Units.jsx";
 import Products from "./pages/dashboard/Products.jsx";
 import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx"; // renamed to avoid confusion
+import VerificationQueue from "./pages/dashboard/VerificationQueue.jsx";
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -47,12 +51,23 @@ function App() {
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />
 
-        {/* Protected: Add Product (both admin + wholesaler) */}
+        {/* Generic Protected Pages */}
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/orders/kanban" element={<ProtectedRoute allowedRoles={["wholesaler", "admin"]}><OrderKanban /></ProtectedRoute>} />
+
         <Route
           path="/add-product"
           element={
             <ProtectedRoute allowedRoles={["admin", "wholesaler"]}>
               <AddProduct />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wholesaler"
+          element={
+            <ProtectedRoute allowedRoles={["wholesaler"]}>
+              <WholesalerDashboard />
             </ProtectedRoute>
           }
         />
@@ -64,6 +79,16 @@ function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Home />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/verification"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout>
+                <VerificationQueue />
               </DashboardLayout>
             </ProtectedRoute>
           }

@@ -1,6 +1,8 @@
 // backend/routes/adminRoutes.js
 import express from "express";
 import User from "../models/User.js";
+import Order from "../models/Order.js";
+import Product from "../models/Product.js";
 
 const router = express.Router();
 
@@ -61,6 +63,34 @@ router.delete("/reject-wholesaler/:id", async (req, res) => {
 
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: "Wholesaler application rejected and removed" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get Platform Analytics
+router.get("/analytics", async (req, res) => {
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalWholesalers = await User.countDocuments({ role: "wholesaler" });
+    const totalRetailers = await User.countDocuments({ role: "retailer" });
+
+    const totalOrders = await Order.countDocuments();
+    const totalProducts = await Product.countDocuments();
+
+    const deliveredOrders = await Order.find({ status: "delivered" });
+    const totalGMV = deliveredOrders.reduce((acc, order) => acc + order.totalAmount, 0);
+
+    res.json({
+      users: {
+        total: totalUsers,
+        wholesalers: totalWholesalers,
+        retailers: totalRetailers
+      },
+      orders: totalOrders,
+      products: totalProducts,
+      gmv: totalGMV
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

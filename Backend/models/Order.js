@@ -20,18 +20,30 @@ const orderSchema = new mongoose.Schema(
     },
     items: [orderItemSchema],
     totalAmount: { type: Number, required: true, min: 0 },
+    platformFee: { type: Number, default: 0 },
+    wholesalerPayout: { type: Number, default: 0 },
     shippingAddress: { type: String, required: true },
     phone: { type: String, required: true },
     notes: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["pending", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending", "accepted", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],
       default: "pending",
+    },
+    paymentMethod: {
+      type: String,
+      enum: ["esewa", "khalti", "cod", "khata"],
+      default: "cod",
+    },
+    khataUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   { timestamps: true }

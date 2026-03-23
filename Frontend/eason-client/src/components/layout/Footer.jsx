@@ -1,6 +1,6 @@
 // src/components/Footer.jsx
 import React from "react";
-import nepalFlag from "../assets/nepal.png";
+import nepalFlag from "../../assets/nepal.png";
 
 export default function Footer() {
   return (

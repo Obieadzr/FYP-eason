@@ -1,8 +1,8 @@
 // src/components/DashboardLayout.jsx
 import { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
-import { LayoutDashboard, Package, Tags, Ruler, Search, Bell, Menu, LogOut, ChevronLeft } from "lucide-react";
+import { useAuthStore } from "../../store/authStore";
+import { LayoutDashboard, Package, Tags, Ruler, Search, Bell, Menu, LogOut, ChevronLeft, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere } from "@react-three/drei";
@@ -10,6 +10,7 @@ import { Float, MeshDistortMaterial, Sphere } from "@react-three/drei";
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/dashboard/products", label: "Products", icon: Package },
+  { to: "/dashboard/verification", label: "KYC Approvals", icon: ShieldCheck },
   { to: "/dashboard/categories", label: "Categories", icon: Tags },
   { to: "/dashboard/units", label: "Units", icon: Ruler },
 ];

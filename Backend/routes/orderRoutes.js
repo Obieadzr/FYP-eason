@@ -3,13 +3,16 @@ import express from "express";
 import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { createOrder } from "./orderController.js";
+import { createOrder, updateOrderStatus } from "../controllers/orderController.js";
 import { sendOrderStatusUpdate } from "../utils/email.js";
 
 const router = express.Router();
 
 // POST /api/orders - Place new order (Cash on Delivery)
 router.post("/", authMiddleware, createOrder);
+
+// PUT /api/orders/:id/status - Update order status
+router.put("/:id/status", authMiddleware, updateOrderStatus);
 
 // GET /api/orders/my-orders - Get current user's orders
 router.get("/my-orders", authMiddleware, async (req, res) => {
