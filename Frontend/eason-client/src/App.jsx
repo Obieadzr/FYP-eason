@@ -9,6 +9,7 @@ import Register from "./pages/auth/Register.jsx";
 import Marketplace from "./pages/retailer/Marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
+import Wishlist from "./pages/retailer/Wishlist.jsx";
 import Orders from "./pages/retailer/Orders.jsx";
 import PendingApproval from "./pages/auth/PendingApproval.jsx";
 import OrderSuccess from "./pages/orders/OrderSuccess.jsx";
@@ -46,6 +47,7 @@ function App() {
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/marketplace/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />

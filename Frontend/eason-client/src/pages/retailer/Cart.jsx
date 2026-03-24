@@ -5,12 +5,45 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   Trash2, Plus, Minus, ArrowRight, MapPin, Package,
   AlertCircle, Wallet, CheckCircle, Lock, Smartphone,
-  ArrowLeft, Loader2, ShoppingBag, Search, User, Heart, X
+  ArrowLeft, Loader2, ShoppingBag, Search, User, Heart, X,
+  Truck, Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import API from "../../utils/api";
 import { useAuthStore } from "../../store/authStore";
+
+/* ─── helpers ────────────────────────────────────────────────────────────────── */
+function getDeliveryDate() {
+  const d = new Date();
+  let added = 0;
+  while (added < 3) {
+    d.setDate(d.getDate() + 1);
+    if (d.getDay() !== 0 && d.getDay() !== 6) added++;
+  }
+  return d.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function TaxTooltip() {
+  const [show, setShow] = React.useState(false);
+  return (
+    <span className="relative inline-flex items-center ml-1">
+      <button
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+        className="text-gray-400 hover:text-gray-600 transition"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      {show && (
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 z-50 leading-relaxed">
+          13% VAT applied as per Nepal tax regulations. Included in the displayed total.
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800" />
+        </span>
+      )}
+    </span>
+  );
+}
 
 /* ─── Minimal top nav ─────────────────────────────────────────────────────── */
 function CartNav() {
@@ -125,12 +158,17 @@ function OrderSummary({ cart, cartTotal }) {
           <span className="text-emerald-600 font-medium">Free</span>
         </div>
         <div className="flex justify-between text-gray-500">
-          <span>Tax (13%)</span>
+          <span className="flex items-center">Tax (13%) <TaxTooltip /></span>
           <span>Rs {tax.toLocaleString()}</span>
         </div>
         <div className="flex justify-between pt-3 border-t border-gray-200 font-bold text-base text-gray-900">
           <span>Total</span>
           <span>Rs {grandTotal.toLocaleString()}</span>
+        </div>
+        {/* Estimated delivery */}
+        <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+          <Truck className="w-3.5 h-3.5 text-gray-400" />
+          <span className="text-xs text-gray-500">Est. Delivery: <span className="font-semibold">{getDeliveryDate()}</span></span>
         </div>
       </div>
 
@@ -389,7 +427,7 @@ export default function Cart() {
                       rows={3}
                       value={shippingInfo.address}
                       onChange={e => setShippingInfo({ ...shippingInfo, address: e.target.value })}
-                      placeholder="Street, Tole, Ward No., City..."
+                      placeholder="e.g. House 12B, Putalisadak, Ward 4, Kathmandu"
                       className="w-full px-4 py-3.5 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 resize-none placeholder-gray-400"
                     />
                   </div>
@@ -405,6 +443,7 @@ export default function Cart() {
                       placeholder="98XXXXXXXX"
                       className="w-full px-4 py-3.5 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 placeholder-gray-400"
                     />
+                    <p className="text-xs text-gray-400 mt-1.5 ml-1">We'll send your order updates to this number via SMS</p>
                   </div>
 
                   <div>
@@ -415,9 +454,22 @@ export default function Cart() {
                       rows={2}
                       value={shippingInfo.notes}
                       onChange={e => setShippingInfo({ ...shippingInfo, notes: e.target.value })}
-                      placeholder="e.g. Leave at door, call before delivery..."
+                      placeholder="Any special instructions for the delivery rider..."
                       className="w-full px-4 py-3.5 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 resize-none placeholder-gray-400"
                     />
+                    {/* Quick-select chips */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {["Leave at door", "Call before delivery", "Ring bell twice"].map(chip => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => setShippingInfo(s => ({ ...s, notes: s.notes ? `${s.notes}, ${chip}` : chip }))}
+                          className="px-3 py-1.5 text-xs border border-gray-200 rounded-full text-gray-500 hover:border-emerald-500 hover:text-emerald-600 transition"
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 

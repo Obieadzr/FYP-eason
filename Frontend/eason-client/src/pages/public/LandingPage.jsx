@@ -1,5 +1,5 @@
 // src/pages/public/LandingPage.jsx
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
@@ -22,6 +22,47 @@ const FadeUp = ({ children, delay = 0, className = "" }) => (
     {children}
   </motion.div>
 );
+
+/* ─── Social Proof Animated Counter ──────────────────────────────────────── */
+function AnimatedStat({ target, prefix = "", suffix = "", label }) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setStarted(true); },
+      { threshold: 0.4 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started) return;
+    const duration = 1800;
+    const steps = 60;
+    const increment = target / steps;
+    let current = 0;
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= target) { setCount(target); clearInterval(timer); }
+      else setCount(Math.floor(current));
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [started, target]);
+
+  return (
+    <div ref={ref} className="flex-1 text-center py-10 px-6 border-r border-gray-200 last:border-r-0">
+      <p className="text-4xl md:text-5xl font-bold text-emerald-600 tracking-tighter">
+        {prefix}{count.toLocaleString()}{suffix}
+      </p>
+      <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold mt-2">{label}</p>
+    </div>
+  );
+}
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 export default function LandingPage() {
@@ -148,6 +189,17 @@ export default function LandingPage() {
           <span className="tracking-widest uppercase font-bold text-[10px]">Scroll</span>
           <ChevronDown className="w-4 h-4 animate-bounce" />
         </motion.div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          SOCIAL PROOF — animated counting stats
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-white border-b border-gray-100">
+        <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
+          <AnimatedStat target={8000} suffix="+" label="Active Traders" />
+          <AnimatedStat prefix="Rs " target={12000000} suffix="+" label="Daily Volume" />
+          <AnimatedStat target={4.9} suffix="★" label="Supplier Rating" />
+        </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════

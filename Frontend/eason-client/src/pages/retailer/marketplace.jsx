@@ -1,5 +1,5 @@
 // src/pages/retailer/Marketplace.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Swal from "sweetalert2";
 import {
@@ -13,6 +13,8 @@ import {
   X,
   SlidersHorizontal,
   User,
+  Eye,
+  Minus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import API from "../../utils/api";
@@ -41,9 +43,26 @@ export default function Marketplace() {
   const [maxPrice, setMaxPrice] = useState("");
   const [loading, setLoading] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [wishlist, setWishlist] = useState([]);
+  const [wishlist, setWishlist] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("eason_wishlist")) || []; }
+    catch { return []; }
+  });
+  const [quickView, setQuickView] = useState(null);
+  const [qvQty, setQvQty] = useState(1);
+  const searchRef = useRef(null);
 
   const { cartCount, addToCart, getAvailableStock } = useCart();
+
+  // Close search dropdown on outside click or Escape
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") { setSearchOpen(false); setShowSuggestions(false); } };
+    const onClickOut = (e) => {
+      if (searchRef.current && !searchRef.current.contains(e.target)) setShowSuggestions(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onClickOut);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("mousedown", onClickOut); };
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery), 300);
@@ -93,7 +112,13 @@ export default function Marketplace() {
     product.priceInfo?.suggestedSellingPrice ||
     Math.round((product.wholesalerPrice || product.price || 0) * 1.38);
 
-  const toggleWishlist = (id) => setWishlist(w => w.includes(id) ? w.filter(x => x !== id) : [...w, id]);
+  const toggleWishlist = (id) => {
+    setWishlist(w => {
+      const next = w.includes(id) ? w.filter(x => x !== id) : [...w, id];
+      localStorage.setItem("eason_wishlist", JSON.stringify(next));
+      return next;
+    });
+  };
 
   const handleLogout = () => {
     Swal.fire({
@@ -231,13 +256,19 @@ export default function Marketplace() {
                       exit={{ width: 0, opacity: 0 }}
                       className="relative flex items-center"
                     >
-                      <input
+                    <input
                         autoFocus
+                        ref={searchRef}
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
                         onFocus={() => setShowSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            setShowSuggestions(false);
+                            setSearchOpen(false);
+                          }
+                        }}
                         placeholder="SEARCH..."
                         className="w-full bg-white/5 border border-white/20 text-white placeholder-gray-500 rounded-none px-4 py-2 text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-white transition-colors pr-10"
                       />
@@ -245,27 +276,44 @@ export default function Marketplace() {
                         <X className="w-4 h-4" />
                       </button>
                       
-                      {/* Suggestions */}
+                      {/* Instant Results Dropdown */}
                       <AnimatePresence>
-                        {showSuggestions && searchQuery && (
+                        {showSuggestions && searchQuery.length >= 2 && (
                           <motion.div
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0 }}
-                            className="absolute top-full mt-2 w-full bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden shadow-2xl z-50"
+                            className="absolute top-full mt-2 left-0 w-80 bg-[#1a1a1a] border border-white/10 shadow-2xl z-50 overflow-hidden"
                           >
-                            {filteredProducts.length > 0 ? filteredProducts.slice(0, 6).map(p => (
+                            {filteredProducts.slice(0, 5).map(p => (
                               <button
                                 key={p._id}
-                                onClick={() => navigate(`/marketplace/product/${p._id}`)}
-                                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 text-sm text-gray-300 hover:text-white transition border-b border-white/5 last:border-0"
+                                onMouseDown={() => navigate(`/marketplace/product/${p._id}`)}
+                                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-white/8 transition border-b border-white/5 last:border-0"
                               >
-                                <span>{p.name}</span>
-                                <span className="text-emerald-400 text-xs font-semibold">Rs {Number(getDisplayPrice(p)).toLocaleString()}</span>
+                                {/* Thumbnail */}
+                                <div className="w-8 h-8 bg-white/10 flex items-center justify-center shrink-0 rounded">
+                                  {p.image
+                                    ? <img src={`http://localhost:5000${p.image}`} alt={p.name} className="w-full h-full object-contain rounded" />
+                                    : <Package className="w-4 h-4 text-gray-500" />
+                                  }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-white text-left truncate">{p.name}</p>
+                                  <p className="text-[11px] text-gray-500">{p.category?.name || "General"}</p>
+                                </div>
+                                <span className="text-xs text-emerald-400 font-semibold shrink-0">
+                                  Rs {Number(getDisplayPrice(p)).toLocaleString()}
+                                </span>
                               </button>
-                            )) : (
-                              <div className="px-4 py-3 text-gray-500 text-sm">No results</div>
+                            ))}
+                            {filteredProducts.length === 0 && (
+                              <div className="px-4 py-3 text-gray-500 text-sm">No results for "{searchQuery}"</div>
                             )}
+                            {/* Footer row */}
+                            <div className="border-t border-white/10 px-4 py-2.5 text-[11px] text-gray-500">
+                              Press <kbd className="bg-white/10 rounded px-1.5 py-0.5 text-white">↵ Enter</kbd> to see all results for "{searchQuery}"
+                            </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -287,10 +335,13 @@ export default function Marketplace() {
               </div>
 
               {/* Wishlist */}
-              <button className="relative p-2 text-gray-400 hover:text-white transition rounded-full hover:bg-white/10">
+              <button
+                onClick={() => navigate("/wishlist")}
+                className="relative p-2 text-gray-400 hover:text-white transition rounded-full hover:bg-white/10"
+              >
                 <Heart className="w-5 h-5" />
                 {wishlist.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {wishlist.length}
                   </span>
                 )}
@@ -385,17 +436,17 @@ export default function Marketplace() {
           </div>
         </section>
 
-        {/* ─────────────────────── CATEGORY EDITORIAL STRIP ───────────────────── */}
-        <section className="bg-[#f5f5f5] border-b border-gray-200">
-          <div className="max-w-screen-2xl mx-auto px-6 py-5 flex items-center gap-3 overflow-x-auto scrollbar-hide">
+        {/* ─────────────────────── STICKY CATEGORY STRIP ───────────────────── */}
+        <section className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm" style={{ position: "sticky", top: "64px", zIndex: 40 }}>
+          <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center gap-3 overflow-x-auto scrollbar-hide">
             {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
+                className={`px-5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
                   selectedCategory === cat
                     ? "bg-black text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-gray-400 hover:text-black"
+                    : "border border-gray-200 text-gray-600 hover:border-black hover:text-black bg-white"
                 }`}
               >
                 {cat}
@@ -519,6 +570,11 @@ export default function Marketplace() {
                 const availableStock = getAvailableStock(product._id, product.stock);
                 const inWishlist = wishlist.includes(product._id);
                 const price = getDisplayPrice(product);
+                const suggestedPrice = getSuggestedPrice(product);
+                const marginPct = price > 0 ? Math.round(((suggestedPrice - price) / price) * 100) : 0;
+                const isOutOfStock = availableStock === 0;
+                const isUrgent = availableStock >= 1 && availableStock <= 5;
+                const isLowStock = availableStock >= 6 && availableStock <= 15;
 
                 return (
                   <motion.div
@@ -526,11 +582,13 @@ export default function Marketplace() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: Math.min(i * 0.04, 0.4) }}
-                    className="group cursor-pointer"
+                    className={`group cursor-pointer relative ${
+                      isOutOfStock ? "opacity-50 pointer-events-none select-none" : ""
+                    }`}
                   >
                     {/* Image */}
                     <div
-                      className="relative aspect-square bg-[#f5f5f5] rounded-2xl overflow-hidden mb-4"
+                      className="relative aspect-square bg-[#f5f5f5] overflow-hidden mb-4"
                       onClick={() => navigate(`/marketplace/product/${product._id}`)}
                     >
                       {product.image ? (
@@ -545,90 +603,120 @@ export default function Marketplace() {
                         </div>
                       )}
 
-                      {/* Badges */}
+                      {/* Out of Stock Overlay */}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white/40">
+                          <span className="bg-gray-800 text-white text-xs font-bold uppercase tracking-widest px-3 py-1">
+                            Out of Stock
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Badges top-left */}
                       <div className="absolute top-3 left-3 flex flex-col gap-1.5">
                         {isNew(product.createdAt) && (
-                          <span className="bg-black text-white text-[10px] font-bold px-2.5 py-1 rounded">NEW</span>
-                        )}
-                        {availableStock <= 5 && availableStock > 0 && (
-                          <span className="bg-red-500 text-white text-[10px] font-bold px-2.5 py-1 rounded">
-                            {availableStock} LEFT
-                          </span>
-                        )}
-                        {availableStock === 0 && (
-                          <span className="bg-gray-400 text-white text-[10px] font-bold px-2.5 py-1 rounded">SOLD OUT</span>
+                          <span className="bg-black text-white text-[10px] font-bold px-2.5 py-1">NEW</span>
                         )}
                       </div>
 
                       {/* Wishlist */}
                       <button
                         onClick={e => { e.stopPropagation(); toggleWishlist(product._id); }}
-                        className={`absolute top-3 right-3 p-2 rounded-full transition ${inWishlist ? "bg-black text-white" : "bg-white/80 text-gray-500 opacity-0 group-hover:opacity-100"}`}
+                        className={`absolute top-3 right-3 p-2 transition ${
+                          inWishlist ? "bg-black text-white" : "bg-white/80 text-gray-500 opacity-0 group-hover:opacity-100"
+                        }`}
                       >
                         <Heart className={`w-3.5 h-3.5 ${inWishlist ? "fill-white" : ""}`} />
                       </button>
 
-                      {/* Quick add overlay */}
-                      <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                      {/* Quick View button — center on hover */}
+                      {!isOutOfStock && (
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            requireAuth(() => {
-                              if (availableStock > 0) addToCart(product);
-                            });
+                            setQvQty(1);
+                            setQuickView(product);
                           }}
-                          disabled={availableStock === 0}
-                          className={`w-full py-3 text-sm font-semibold transition ${
-                            availableStock === 0
-                              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                              : "bg-black text-white hover:bg-gray-900"
-                          }`}
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          {availableStock === 0 ? "Sold Out" : "Add to Cart"}
+                          <span className="flex items-center gap-2 bg-white text-black text-xs font-bold uppercase tracking-widest px-4 py-2.5 shadow-lg">
+                            <Eye className="w-3.5 h-3.5" /> Quick View
+                          </span>
                         </button>
-                      </div>
+                      )}
+
+                      {/* Quick add overlay */}
+                      {!isOutOfStock && (
+                        <div className="absolute bottom-0 left-0 right-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                          <button
+                            onClick={e => {
+                              e.stopPropagation();
+                              requireAuth(() => { addToCart(product); });
+                            }}
+                            className="w-full py-3 text-sm font-semibold bg-black text-white hover:bg-gray-900 transition"
+                          >
+                            Add to Cart
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Info */}
-                    <div onClick={() => navigate(`/marketplace/product/${product._id}`)}>
+                    <div onClick={() => !isOutOfStock && navigate(`/marketplace/product/${product._id}`)}>
                       <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">
                         {product.category?.name || "General"}
                       </p>
                       <h3 className="text-sm font-medium text-gray-900 line-clamp-2 leading-snug">
                         {product.name}
                       </h3>
-                      <div className="mt-2 flex items-center gap-2">
+
+                      {/* Price row + margin badge */}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-gray-900">
                           Rs {Number(price).toLocaleString()}
                         </span>
-                        {user?.role === "retailer" && (
-                          <span className="text-xs text-gray-400">
-                            · sell Rs {Number(getSuggestedPrice(product)).toLocaleString()}
+                        {user?.role === "retailer" && marginPct > 0 && (
+                          <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            +{marginPct}% margin
                           </span>
                         )}
                       </div>
-                      {availableStock > 0 && availableStock <= 10 && (
-                        <p className="text-xs text-amber-600 mt-1 font-medium">Only {availableStock} left</p>
+
+                      {/* Suggested sell price for retailers */}
+                      {user?.role === "retailer" && (
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Sell @ Rs {Number(suggestedPrice).toLocaleString()}
+                        </p>
+                      )}
+
+                      {/* Stock urgency indicators */}
+                      {isUrgent && (
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse shrink-0" />
+                          <p className="text-[11px] text-red-600 font-semibold">
+                            Only {availableStock} left — selling fast
+                          </p>
+                        </div>
+                      )}
+                      {isLowStock && (
+                        <p className="text-[11px] text-amber-600 font-semibold mt-1.5">
+                          ⚠ Low stock
+                        </p>
                       )}
                     </div>
 
                     {/* Buy Now */}
-                    <button
-                      onClick={e => {
-                        e.stopPropagation();
-                        requireAuth(() => {
-                          if (availableStock > 0) { addToCart(product); navigate("/cart"); }
-                        });
-                      }}
-                      disabled={availableStock === 0}
-                      className={`mt-3 w-full py-2.5 rounded-full text-xs font-semibold transition ${
-                        availableStock === 0
-                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                          : "bg-emerald-600 text-white hover:bg-emerald-700"
-                      }`}
-                    >
-                      {availableStock === 0 ? "Out of Stock" : "Buy Now"}
-                    </button>
+                    {!isOutOfStock && (
+                      <button
+                        onClick={e => {
+                          e.stopPropagation();
+                          requireAuth(() => { addToCart(product); navigate("/cart"); });
+                        }}
+                        className="mt-3 w-full py-2.5 text-xs font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                      >
+                        Buy Now
+                      </button>
+                    )}
                   </motion.div>
                 );
               })}
@@ -643,6 +731,151 @@ export default function Marketplace() {
           </p>
         </footer>
       </div>
+
+      {/* ─────────────────────── QUICK VIEW MODAL ────────────────────────────── */}
+      <AnimatePresence>
+        {quickView && (() => {
+          const qvStock = getAvailableStock(quickView._id, quickView.stock);
+          const qvPrice = getDisplayPrice(quickView);
+          const qvSuggested = getSuggestedPrice(quickView);
+          const qvMargin = qvPrice > 0 ? Math.round(((qvSuggested - qvPrice) / qvPrice) * 100) : 0;
+          return (
+            <motion.div
+              key="qv-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={e => { if (e.target === e.currentTarget) setQuickView(null); }}
+            >
+              <motion.div
+                initial={{ scale: 0.94, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.94, opacity: 0, y: 20 }}
+                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                className="bg-white w-full max-w-3xl overflow-hidden"
+                style={FONT_STYLE}
+              >
+                {/* Close */}
+                <button
+                  onClick={() => setQuickView(null)}
+                  className="absolute top-4 right-4 z-10 w-9 h-9 bg-black text-white flex items-center justify-center hover:bg-gray-800 transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="grid md:grid-cols-2">
+                  {/* Image */}
+                  <div className="relative bg-[#f5f5f5] aspect-square md:aspect-auto flex items-center justify-center p-8">
+                    {quickView.image
+                      ? <img src={`http://localhost:5000${quickView.image}`} alt={quickView.name} className="w-full h-full object-contain" />
+                      : <Package className="w-16 h-16 text-gray-300" />
+                    }
+                    {isNew(quickView.createdAt) && (
+                      <span className="absolute top-4 left-4 bg-black text-white text-[10px] font-bold px-2.5 py-1">NEW</span>
+                    )}
+                  </div>
+
+                  {/* Details */}
+                  <div className="p-8 flex flex-col gap-5 overflow-y-auto max-h-[80vh]">
+                    <div>
+                      <p className="text-[11px] text-gray-400 uppercase tracking-widest font-bold mb-1">
+                        {quickView.category?.name || "General"}
+                      </p>
+                      <h2 className="text-2xl font-bold tracking-tight text-black">{quickView.name}</h2>
+                    </div>
+
+                    {/* Price */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-3xl font-bold text-black">Rs {Number(qvPrice).toLocaleString()}</span>
+                      {user?.role === "retailer" && qvMargin > 0 && (
+                        <span className="bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full">+{qvMargin}% margin</span>
+                      )}
+                    </div>
+                    {user?.role === "retailer" && (
+                      <p className="text-sm text-gray-400 -mt-3">Sell @ Rs {Number(qvSuggested).toLocaleString()}</p>
+                    )}
+
+                    {/* Stock status */}
+                    <div className="flex items-center gap-2">
+                      {qvStock === 0 ? (
+                        <span className="text-xs font-bold text-red-600 uppercase tracking-widest">Out of Stock</span>
+                      ) : qvStock <= 5 ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                          <span className="text-xs font-semibold text-red-600">Only {qvStock} left — selling fast</span>
+                        </div>
+                      ) : qvStock <= 15 ? (
+                        <span className="text-xs font-semibold text-amber-600">⚠ Low stock ({qvStock} units)</span>
+                      ) : (
+                        <span className="text-xs font-semibold text-emerald-600">✓ In Stock</span>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {quickView.description && (
+                      <p className="text-sm text-gray-500 leading-relaxed border-t border-gray-100 pt-4">
+                        {quickView.description}
+                      </p>
+                    )}
+
+                    {/* Quantity selector */}
+                    {qvStock > 0 && (
+                      <div className="flex items-center gap-4">
+                        <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Qty</span>
+                        <div className="flex items-center border border-gray-200">
+                          <button
+                            onClick={() => setQvQty(q => Math.max(1, q - 1))}
+                            className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                          >
+                            <Minus className="w-3.5 h-3.5" />
+                          </button>
+                          <span className="w-12 text-center text-sm font-bold">{qvQty}</span>
+                          <button
+                            onClick={() => setQvQty(q => Math.min(qvStock, q + 1))}
+                            className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Buttons */}
+                    <div className="flex flex-col gap-3 mt-2">
+                      <button
+                        onClick={() => {
+                          requireAuth(() => {
+                            for (let i = 0; i < qvQty; i++) addToCart(quickView);
+                            setQuickView(null);
+                          });
+                        }}
+                        disabled={qvStock === 0}
+                        className="w-full py-4 bg-white border-2 border-black text-black text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={() => {
+                          requireAuth(() => {
+                            for (let i = 0; i < qvQty; i++) addToCart(quickView);
+                            setQuickView(null);
+                            navigate("/cart");
+                          });
+                        }}
+                        disabled={qvStock === 0}
+                        className="w-full py-4 bg-emerald-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-emerald-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Buy Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </>
   );
 }
