@@ -97,13 +97,16 @@ export default function Marketplace() {
 
   const handleLogout = () => {
     Swal.fire({
-      title: "Sign out?", text: "You'll be redirected to the home page.",
-      icon: "warning", showCancelButton: true,
-      confirmButtonColor: "#10b981", cancelButtonColor: "#374151",
+      title: "SIGN OUT?", text: "You'll be redirected to the home page.",
+      showCancelButton: true,
       confirmButtonText: "Sign out", cancelButtonText: "Cancel",
       customClass: {
-        popup: "!rounded-2xl !shadow-2xl",
-        title: "!text-xl !font-semibold",
+        popup: "!rounded-none !border !border-gray-200 !shadow-2xl !p-8",
+        title: "!text-2xl !font-bold !tracking-tight !text-black !uppercase",
+        htmlContainer: "!text-gray-500 !text-sm !tracking-widest !uppercase !font-bold !mt-2",
+        actions: "!mt-8 !flex !gap-4 !w-full !px-4",
+        confirmButton: "!flex-1 !bg-black !text-white !font-bold !uppercase !tracking-widest !py-4 !text-xs !transition-colors hover:!bg-gray-800",
+        cancelButton: "!flex-1 !bg-white !text-black !border !border-gray-200 !font-bold !uppercase !tracking-widest !py-4 !text-xs !transition-colors hover:!border-black",
       },
       buttonsStyling: false,
     }).then(r => {
@@ -114,12 +117,18 @@ export default function Marketplace() {
   const requireAuth = (cb) => {
     if (!user) {
       Swal.fire({
-        title: "Sign in required", text: "Create an account to start ordering.",
-        icon: "info", showCancelButton: true,
-        confirmButtonColor: "#10b981", cancelButtonColor: "#374151",
+        title: "SIGN IN REQUIRED", text: "Create an account to start ordering.",
+        showCancelButton: true,
         confirmButtonText: "Create account", cancelButtonText: "Cancel",
         buttonsStyling: false,
-        customClass: { popup: "!rounded-2xl !shadow-2xl", title: "!text-xl !font-semibold" }
+        customClass: {
+          popup: "!rounded-none !border !border-gray-200 !shadow-2xl !p-8",
+          title: "!text-2xl !font-bold !tracking-tight !text-black !uppercase",
+          htmlContainer: "!text-gray-500 !text-sm !tracking-widest !uppercase !font-bold !mt-2",
+          actions: "!mt-8 !flex !gap-4 !w-full !px-4",
+          confirmButton: "!flex-1 !bg-black !text-white !font-bold !uppercase !tracking-widest !py-4 !text-xs !transition-colors hover:!bg-gray-800",
+          cancelButton: "!flex-1 !bg-white !text-black !border !border-gray-200 !font-bold !uppercase !tracking-widest !py-4 !text-xs !transition-colors hover:!border-black",
+        }
       }).then(r => { if (r.isConfirmed) navigate("/register"); });
       return;
     }
@@ -177,9 +186,9 @@ export default function Marketplace() {
 
           {/* Main nav */}
           <nav className="px-6 py-4 flex items-center gap-8 max-w-screen-2xl mx-auto">
-            {/* Logo */}
+            {/* Logo — stays in marketplace */}
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/marketplace")}
               className="text-white text-xl font-bold tracking-tight shrink-0 hover:opacity-80 transition mr-4"
             >
               eAson<span className="text-emerald-400">.</span>
@@ -213,20 +222,14 @@ export default function Marketplace() {
             <div className="flex items-center gap-3 ml-auto shrink-0">
               {/* Search */}
               <div className="relative hidden md:flex items-center">
-                <button
-                  onClick={() => setSearchOpen(!searchOpen)}
-                  className="flex items-center gap-2 bg-white/8 hover:bg-white/15 text-gray-300 hover:text-white px-4 py-2 rounded-full text-sm transition"
-                >
-                  <Search className="w-4 h-4" />
-                  <span className="hidden lg:inline text-xs">Search</span>
-                </button>
-                <AnimatePresence>
-                  {searchOpen && (
+                <AnimatePresence mode="wait">
+                  {searchOpen ? (
                     <motion.div
+                      key="search-input"
                       initial={{ width: 0, opacity: 0 }}
                       animate={{ width: 280, opacity: 1 }}
                       exit={{ width: 0, opacity: 0 }}
-                      className="absolute right-10 overflow-hidden"
+                      className="relative flex items-center"
                     >
                       <input
                         autoFocus
@@ -235,9 +238,13 @@ export default function Marketplace() {
                         onChange={e => setSearchQuery(e.target.value)}
                         onFocus={() => setShowSuggestions(true)}
                         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                        placeholder="Search products..."
-                        className="w-full bg-white/10 border border-white/15 text-white placeholder-gray-500 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-emerald-500/60"
+                        placeholder="SEARCH..."
+                        className="w-full bg-white/5 border border-white/20 text-white placeholder-gray-500 rounded-none px-4 py-2 text-xs font-bold tracking-widest uppercase focus:outline-none focus:border-white transition-colors pr-10"
                       />
+                      <button onClick={() => setSearchOpen(false)} className="absolute right-3 text-white/50 hover:text-white transition">
+                        <X className="w-4 h-4" />
+                      </button>
+                      
                       {/* Suggestions */}
                       <AnimatePresence>
                         {showSuggestions && searchQuery && (
@@ -263,6 +270,18 @@ export default function Marketplace() {
                         )}
                       </AnimatePresence>
                     </motion.div>
+                  ) : (
+                    <motion.button
+                      key="search-button"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      onClick={() => setSearchOpen(true)}
+                      className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-none text-xs font-bold tracking-widest uppercase transition-colors"
+                    >
+                      <Search className="w-4 h-4" />
+                      <span className="hidden lg:inline">Search</span>
+                    </motion.button>
                   )}
                 </AnimatePresence>
               </div>
@@ -300,12 +319,17 @@ export default function Marketplace() {
                 )}
               </button>
 
-              {/* Account */}
+              {/* Account / Profile */}
               <button
-                onClick={() => navigate(user ? "/settings" : "/login")}
-                className="p-2 text-gray-400 hover:text-white transition rounded-full hover:bg-white/10"
+                onClick={() => navigate(user ? "/profile" : "/login")}
+                className="flex items-center gap-2 p-2 text-gray-400 hover:text-white transition rounded-full hover:bg-white/10"
               >
-                <User className="w-5 h-5" />
+                {user
+                  ? <div className="w-7 h-7 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                      {user.firstName?.[0]?.toUpperCase()}
+                    </div>
+                  : <User className="w-5 h-5" />
+                }
               </button>
             </div>
           </nav>

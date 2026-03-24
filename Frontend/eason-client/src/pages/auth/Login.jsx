@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
 import API from "../../utils/api.js";
 import { useAuthStore } from "../../store/authStore";
+import { motion, AnimatePresence } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere, MeshWobbleMaterial, TorusKnot } from "@react-three/drei";
 
@@ -13,7 +14,6 @@ const FiberScene = () => (
     <directionalLight position={[-10, 10, 5]} intensity={1.8} color="#6366f1" />
     <directionalLight position={[10, -5, -5]} intensity={0.8} color="#10b981" />
     <pointLight position={[0, 2, 2]} intensity={1.5} color="#818cf8" />
-
     <Float speed={0.8} rotationIntensity={0.8} floatIntensity={0.6}>
       <TorusKnot args={[1.2, 0.35, 256, 32]} scale={1.4}>
         <MeshWobbleMaterial color="#10b981" factor={0.15} speed={1} roughness={0.05} metalness={0.98} transparent opacity={0.22} />
@@ -29,137 +29,154 @@ const FiberScene = () => (
         <MeshDistortMaterial color="#14b8a6" distort={0.4} speed={2.5} roughness={0.1} metalness={0.9} transparent opacity={0.2} />
       </Sphere>
     </Float>
-    <Float speed={5} rotationIntensity={3} floatIntensity={3}>
-      <Sphere args={[1, 32, 32]} scale={0.4} position={[1, -2.5, 0]}>
-        <MeshDistortMaterial color="#a78bfa" distort={0.7} speed={5} roughness={0} metalness={1} transparent opacity={0.6} />
-      </Sphere>
-    </Float>
   </Canvas>
 );
+
+const inputCls = "w-full bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm px-4 py-3.5 rounded-xl focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition";
 
 export default function Login() {
   const navigate = useNavigate();
   const { login: zustandLogin, checkAuth } = useAuthStore();
 
   const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
     setLoading(true);
+    setError("");
     try {
       const res = await API.post("/auth/login", { email, password });
-      const { token, user } = res.data;
-      localStorage.setItem("eason_token", token);
-      zustandLogin(user);
+      // Store token so API calls are authenticated
+      if (res.data.token) {
+        localStorage.setItem("eason_token", res.data.token);
+      }
+      zustandLogin(res.data.user);
       await checkAuth();
-      const role = user?.role?.toLowerCase()?.trim();
-      if (role === "admin") navigate("/dashboard", { replace: true });
-      else if (role === "wholesaler") navigate(user.verified ? "/marketplace" : "/pending-approval", { replace: true });
-      else navigate("/marketplace", { replace: true });
+      const role = res.data.user?.role;
+      navigate(role === "admin" ? "/dashboard" : role === "wholesaler" ? "/profile" : "/marketplace");
     } catch (err) {
-      setError(err.response?.data?.message || "Login failed. Check credentials.");
+      setError(err.response?.data?.message || "Invalid email or password.");
     } finally {
       setLoading(false);
     }
   };
 
-  const inputCls = "w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/60 focus:bg-white/8 transition-all text-base";
-
   return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <div className="min-h-screen bg-[#080808] grid lg:grid-cols-2" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
+      {/* Left — 3D scene */}
+      <div className="relative hidden lg:block overflow-hidden">
+        <Suspense fallback={null}>
+          <FiberScene />
+        </Suspense>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#080808]/60" />
+        <div className="absolute bottom-16 left-16 right-16">
+          <h1 className="text-5xl font-light text-white leading-tight tracking-tighter">
+            Good to have<br />
+            <span className="text-emerald-400 font-semibold">you back.</span>
+          </h1>
+          <p className="mt-4 text-white/40 text-sm leading-relaxed max-w-xs">
+            Your orders, stock, and suppliers — all waiting right where you left them.
+          </p>
+        </div>
+      </div>
 
-      <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Right — form */}
+      <div className="flex items-center justify-center px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md"
+        >
+          <Link to="/" className="inline-block text-xl font-bold text-white mb-12">
+            eAson<span className="text-emerald-400">.</span>
+          </Link>
 
-        {/* LEFT */}
-        <div className="hidden lg:flex flex-1 relative overflow-hidden bg-[#06060f]">
-          <div className="absolute inset-0">
-            <Suspense fallback={null}><FiberScene /></Suspense>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/25" />
+          <h2 className="text-3xl font-semibold text-white mb-1">Sign in</h2>
+          <p className="text-white/35 text-sm mb-10">
+            New here?{" "}
+            <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-medium transition">
+              Create an account
+            </Link>
+          </p>
 
-          <div className="relative z-10 flex flex-col justify-between p-14 w-full">
-            <div onClick={() => navigate("/")} className="text-xl font-semibold text-white cursor-pointer hover:opacity-75 transition tracking-tight">
-              eAson<span className="text-emerald-400">.</span>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+                autoComplete="email"
+                className={inputCls}
+              />
             </div>
 
             <div>
-              <h1 className="text-5xl xl:text-6xl font-light text-white leading-tight tracking-tight">
-                Good to have<br />
-                <span className="font-semibold text-indigo-400">you back.</span>
-              </h1>
-              <p className="text-gray-500 mt-5 text-base font-normal max-w-xs leading-relaxed">
-                Your suppliers and orders are waiting.
-              </p>
-            </div>
-
-            <div className="text-xs text-gray-700 tracking-wide">© 2025 eAson</div>
-          </div>
-        </div>
-
-        {/* RIGHT */}
-        <div className="flex-1 bg-[#09090b] flex items-center justify-center px-6 py-16 relative">
-          <div className="absolute top-0 left-0 w-80 h-80 bg-indigo-900/15 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="w-full max-w-md relative z-10">
-            <div className="lg:hidden mb-10">
-              <span onClick={() => navigate("/")} className="text-xl font-semibold text-white cursor-pointer">
-                eAson<span className="text-emerald-400">.</span>
-              </span>
-            </div>
-
-            <div className="mb-8">
-              <h2 className="text-3xl font-semibold text-white tracking-tight">Sign in</h2>
-              <p className="text-gray-500 mt-2 text-sm">Welcome back — enter your details below</p>
-            </div>
-
-            {error && (
-              <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-                {error}
+              <div className="flex justify-between items-center mb-1.5">
+                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Password</label>
+                <a href="#" className="text-xs text-emerald-400 hover:text-emerald-300 transition">Forgot password?</a>
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <input
-                type="email" placeholder="Email address" required
-                value={email} onChange={(e) => setEmail(e.target.value)}
-                className={inputCls}
-              />
-
               <div className="relative">
                 <input
-                  type={showPass ? "text" : "password"} placeholder="Password" required
-                  value={password} onChange={(e) => setPassword(e.target.value)}
-                  className={`${inputCls} pr-12`}
+                  type={showPass ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Your password"
+                  required
+                  autoComplete="current-password"
+                  className={`${inputCls} pr-11`}
                 />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">
+                <button
+                  type="button"
+                  onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition"
+                >
                   {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
 
-              <div className="flex justify-end">
-                <a href="#" className="text-xs text-gray-600 hover:text-gray-400 transition">Forgot password?</a>
-              </div>
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-xl"
+                >
+                  {error}
+                </motion.p>
+              )}
+            </AnimatePresence>
 
-              <button type="submit" disabled={loading}
-                className="w-full py-4 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-500 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Sign in</span><ArrowRight className="w-4 h-4" /></>}
-              </button>
-            </form>
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 mt-2 text-sm"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {loading ? "Signing in..." : "Sign In"}
+              {!loading && <ArrowRight className="w-4 h-4" />}
+            </motion.button>
+          </form>
 
-            <p className="text-center mt-7 text-gray-600 text-sm">
-              Don't have an account?{" "}
-              <Link to="/register" className="text-emerald-400 hover:text-emerald-300 transition font-medium">Create one</Link>
-            </p>
-          </div>
-        </div>
+          <p className="mt-8 text-center text-white/20 text-xs">
+            By signing in you agree to our{" "}
+            <a href="#" className="text-white/40 hover:text-white transition">Terms</a> and{" "}
+            <a href="#" className="text-white/40 hover:text-white transition">Privacy Policy</a>.
+          </p>
+        </motion.div>
       </div>
-    </>
+    </div>
   );
 }

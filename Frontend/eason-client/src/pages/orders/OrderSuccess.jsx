@@ -1,7 +1,7 @@
 // src/pages/OrderSuccess.jsx
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CheckCircle } from "lucide-react";
+import { Check, ArrowRight } from "lucide-react";
 
 export default function OrderSuccess() {
   const { state, search } = useLocation();
@@ -11,29 +11,31 @@ export default function OrderSuccess() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center max-w-lg p-10 bg-white rounded-2xl shadow-xl">
-        <CheckCircle className="w-24 h-24 mx-auto text-emerald-600 mb-6" />
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Order Placed Successfully!</h1>
-        <p className="text-xl text-gray-600 mb-8">
-          Thank you for shopping with us.<br />
-          Order ID: <strong>{orderId}</strong><br />
-          {total > 0 && <>Total: <strong>Rs {total.toLocaleString()}</strong><br /></>}
-          (Cash on Delivery – pay when your order arrives)
-        </p>
-        <p className="text-gray-500 mb-10">
-          We'll notify you when your order is shipped.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+    <div className="min-h-screen flex items-center justify-center bg-white" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="text-center w-full max-w-2xl px-6 py-20 border-t-4 border-black">
+        <div className="w-20 h-20 bg-black text-white rounded-none flex items-center justify-center mx-auto mb-10">
+          <Check className="w-10 h-10" />
+        </div>
+        
+        <h1 className="text-5xl font-bold tracking-tighter text-black mb-6 uppercase">Order Confirmed.</h1>
+        
+        <div className="space-y-2 mb-12 text-sm uppercase tracking-widest font-bold text-gray-400">
+          <p>Thank you for your purchase.</p>
+          <p>Order ID: <span className="text-black">{orderId}</span></p>
+          {total > 0 && <p>Total: <span className="text-black">Rs {total.toLocaleString()}</span></p>}
+          <p className="mt-4 text-xs">Cash on Delivery applies.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mt-12">
           <button
             onClick={() => navigate("/marketplace")}
-            className="px-10 py-4 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition"
+            className="px-8 py-5 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors flex items-center justify-center gap-3"
           >
-            Continue Shopping
+            Continue Shopping <ArrowRight className="w-4 h-4" />
           </button>
           <button
-            onClick={() => navigate("/orders")}
-            className="px-10 py-4 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition"
+            onClick={() => navigate("/profile")}
+            className="px-8 py-5 bg-white text-black border border-gray-200 text-xs font-bold uppercase tracking-widest hover:border-black transition-colors"
           >
             View My Orders
           </button>

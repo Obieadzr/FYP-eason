@@ -13,11 +13,10 @@ import Orders from "./pages/retailer/Orders.jsx";
 import PendingApproval from "./pages/auth/PendingApproval.jsx";
 import OrderSuccess from "./pages/orders/OrderSuccess.jsx";
 import OrderKanban from "./pages/orders/OrderKanban.jsx";
-import Settings from "./pages/auth/Settings.jsx";
+import Profile from "./pages/auth/Profile.jsx";
 
 // Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
-import WholesalerDashboard from "./pages/wholesaler/WholesalerDashboard.jsx";
 
 // Dashboard
 import DashboardLayout from "./components/layout/DashboardLayout.jsx";
@@ -52,7 +51,7 @@ function App() {
         <Route path="/order-success" element={<OrderSuccess />} />
 
         {/* Generic Protected Pages */}
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/orders/kanban" element={<ProtectedRoute allowedRoles={["wholesaler", "admin"]}><OrderKanban /></ProtectedRoute>} />
 
         <Route
@@ -60,14 +59,6 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["admin", "wholesaler"]}>
               <AddProduct />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wholesaler"
-          element={
-            <ProtectedRoute allowedRoles={["wholesaler"]}>
-              <WholesalerDashboard />
             </ProtectedRoute>
           }
         />

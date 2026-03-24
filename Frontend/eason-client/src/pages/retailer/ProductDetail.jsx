@@ -58,7 +58,7 @@ function StickyNav() {
             )}
           </button>
           <button
-            onClick={() => navigate("/settings")}
+            onClick={() => navigate("/profile")}
             className={`p-2 rounded-full transition hover:bg-black/10 ${solid ? "text-gray-600" : "text-white"}`}
           >
             <User className="w-5 h-5" />

@@ -1,50 +1,49 @@
-import React from "react";
-import { motion } from "framer-motion";
+// src/pages/public/LandingPage.jsx
+import React, { useRef, useEffect } from "react";
+import { motion, useScroll, useTransform } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
-// import { useAuthStore } from "../../store/authStore";
 import {
-  ArrowRight,
-  Plus,
-  Timer,
-  DollarSign,
-  MapPin,
-  Search,
-  Package,
-  Store,
-  Warehouse,
-  ShoppingBag,
+  ArrowRight, Plus, Package, Store, Warehouse, ShoppingBag,
+  CheckCircle, Zap, Shield, Users, ChevronDown,
 } from "lucide-react";
-import nepalFlag from "../../assets/nepal.png";
-import { useNavigate } from "react-router-dom";
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+const FadeUp = ({ children, delay = 0, className = "" }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 40 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true, margin: "-60px" }}
+    transition={{ duration: 0.9, delay, ease: [0.22, 1, 0.36, 1] }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
+
+/* ─────────────────────────────────────────────────────────────────────────── */
 export default function LandingPage() {
   const navigate = useNavigate();
-  
-  const benefits = [
-    {
-      icon: Timer,
-      title: "Save 4–6 Hours Weekly",
-      desc: "No travel. No calls. Order in 20 seconds.", 
-      color: "emerald",
-    },
-    {
-      icon: DollarSign,
-      title: "Direct Wholesale Price",
-      desc: "Zero dalal. Zero hidden cuts.",
-      color: "blue",
-    },
-    {
-      icon: Package,
-      title: "Real-Time Stock",
-      desc: "See live availability. Track every order.",
-      color: "violet",
-    },
-    {
-      icon: MapPin,
-      title: "All Markets in One App",
-      desc: "Ason + Kalimati + Bhotebahal — instantly.",
-      color: "orange",
-    },
+  const videoRef = useRef(null);
+
+  // Parallax scroll for hero text
+  const { scrollY } = useScroll();
+  const heroTextY = useTransform(scrollY, [0, 600], [0, 180]);
+  const heroBgY   = useTransform(scrollY, [0, 600], [0, 80]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.75;
+    }
+  }, []);
+
+  const trusts = [
+    { icon: CheckCircle, label: "Verified Suppliers",  desc: "KYC-cleared wholesalers only. Zero fakes.",  color: "text-emerald-400" },
+    { icon: Shield,      label: "Buyer Protection",    desc: "Escrow payments. Full refund if goods don't match.", color: "text-white"      },
+    { icon: Zap,         label: "Instant Payments",    desc: "eSewa · Khalti · IME · Fonepay.",            color: "text-emerald-400" },
+    { icon: Users,       label: "8,000+ Traders",      desc: "The largest wholesale network in Nepal.",    color: "text-white"       },
   ];
 
   return (
@@ -54,611 +53,395 @@ export default function LandingPage() {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           letter-spacing: -0.01em;
         }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
       `}</style>
-  
-      <Navbar/>
-      
 
-      {/* HERO */}
-      <section className="relative min-h-screen flex items-center bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 grid lg:grid-cols-2 gap-16 items-center">
-          <div className="max-w-lg">
-            <div className="text-emerald-600 text-sm font-medium tracking-widest uppercase mb-8">
-              Wholesale, rebuilt
-            </div>
-            <h1 className="text-7xl lg:text-8xl font-light tracking-tight text-gray-900 leading-none">
-              eAson
-              <span className="block text-5xl lg:text-6xl text-gray-500 mt-3">
-                Wholesale
-              </span>
-              <span className="block text-5xl lg:text-6xl bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-                Rebuilt.
-              </span>
-            </h1>
-            <p className="mt-10 text-lg text-gray-600 font-light leading-relaxed">
-              Real-time stock. Factory-direct pricing.
-              <br />
-              Pay instantly with Khalti, eSewa, IME Pay.
-            </p>
-            <div className="mt-12 flex flex-col sm:flex-row gap-4">
+      <Navbar />
+
+      {/* ══════════════════════════════════════════════════════════════════
+          HERO — full-bleed video, Nike-style bold editorial
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="relative min-h-screen bg-black overflow-hidden flex flex-col justify-end">
+
+        {/* Video */}
+        <motion.div style={{ y: heroBgY }} className="absolute inset-0">
+          <video
+            ref={videoRef}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover opacity-60"
+            poster="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&w=1600"
+          >
+            <source
+              src="https://videos.pexels.com/video-files/3252215/3252215-uhd_2560_1440_25fps.mp4"
+              type="video/mp4"
+            />
+          </video>
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
+        </motion.div>
+
+        {/* Content pinned to bottom-left — Nike style */}
+        <motion.div
+          style={{ y: heroTextY }}
+          className="relative z-10 max-w-screen-2xl mx-auto px-8 md:px-12 pb-20 md:pb-24 w-full"
+        >
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.3 }}
+            className="text-white text-xs font-bold tracking-widest uppercase mb-4"
+          >
+            Nepal's Premium Wholesale Network
+          </motion.p>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+            className="text-[clamp(4rem,14vw,11rem)] font-bold text-white leading-[0.85] tracking-tighter uppercase"
+          >
+            Just
+            <br />
+            <em className="not-italic text-emerald-400">Order It.</em>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1, delay: 0.6 }}
+            className="mt-8 text-white/70 text-base md:text-lg font-medium max-w-md leading-relaxed"
+          >
+            Factory-direct pricing. Real-time stock. No middlemen, no chaos.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9, delay: 0.8 }}
+            className="mt-12 flex flex-wrap gap-4"
+          >
+            <button
+              onClick={() => navigate("/marketplace")}
+              className="group flex items-center gap-3 px-10 py-5 bg-white text-black text-xs font-bold tracking-widest uppercase hover:bg-gray-200 transition-colors rounded-none"
+            >
+              Shop Now
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </button>
+            <button
+              onClick={() => navigate("/register")}
+              className="px-10 py-5 border border-white text-white hover:bg-white hover:text-black text-xs font-bold tracking-widest uppercase transition-colors rounded-none"
+            >
+              Create Account
+            </button>
+          </motion.div>
+        </motion.div>
+
+        {/* Scroll hint */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1.4, duration: 1 }}
+          className="absolute bottom-6 right-8 z-10 flex items-center gap-2 text-white/50 text-xs"
+        >
+          <span className="tracking-widest uppercase font-bold text-[10px]">Scroll</span>
+          <ChevronDown className="w-4 h-4 animate-bounce" />
+        </motion.div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          STATS BAR — matches marketplace dark bar
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-black border-y border-white/20">
+        <div className="max-w-screen-2xl mx-auto px-8 py-10 flex flex-wrap justify-between items-center gap-8">
+          {[
+            { val: "8,000+",    label: "Active Traders"      },
+            { val: "Rs 1.2Cr+", label: "Daily Trading Volume" },
+            { val: "500+",      label: "Verified Products"    },
+            { val: "4.9 ★",     label: "Supplier Rating"      },
+            { val: "2–4 days",  label: "Delivery Time"       },
+          ].map(({ val, label }, i) => (
+            <FadeUp key={i} delay={i * 0.06} className="text-center sm:text-left">
+              <div>
+                <p className="text-3xl font-bold tracking-tighter text-white">{val}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">{label}</p>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          EDITORIAL SPLIT — "Order. Track. Grow." — dark/white
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-[#111]">
+        <div className="max-w-screen-2xl mx-auto">
+
+          {/* Row 1 — big text + description */}
+          <div className="grid lg:grid-cols-2 border-b border-white/20">
+            <FadeUp className="px-10 py-24 flex flex-col justify-center border-b lg:border-b-0 lg:border-r border-white/20 hover:bg-[#1a1a1a] transition-colors">
+              <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest mb-6">01 — ORDER</p>
+              <h2 className="text-5xl md:text-7xl font-bold text-white leading-none tracking-tighter uppercase">
+                Buy direct.<br />
+                Pay fast.
+              </h2>
+              <p className="mt-8 text-gray-400 text-sm font-medium leading-relaxed max-w-sm">
+                Browse hundreds of wholesale products from KYC-verified nepali suppliers. Add to cart in seconds. Pay with Khalti, eSewa, or COD.
+              </p>
+              <button
+                onClick={() => navigate("/marketplace")}
+                className="mt-12 self-start group flex items-center gap-3 text-white text-xs font-bold uppercase tracking-widest border-b-2 border-transparent hover:border-emerald-400 transition-colors pb-1"
+              >
+                Browse Marketplace <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </FadeUp>
+
+            <FadeUp delay={0.1} className="px-10 py-24 flex flex-col justify-center bg-[#0a0a0a] hover:bg-[#111] transition-colors">
+              <p className="text-xs text-white/50 font-bold uppercase tracking-widest mb-6">02 — TRACK</p>
+              <h2 className="text-5xl md:text-7xl font-bold text-white leading-none tracking-tighter uppercase">
+                Every order.<br />
+                Accounted for.
+              </h2>
+              <p className="mt-8 text-gray-400 text-sm font-medium leading-relaxed max-w-sm">
+                Real-time order tracking, live stock updates, and instant notifications — so you never get surprised by an empty shelf again.
+              </p>
               <button
                 onClick={() => navigate("/register")}
-                className="px-9 py-4 bg-black text-white font-medium rounded-xl hover:bg-gray-900 transition"
+                className="mt-12 self-start group flex items-center gap-3 text-white text-xs font-bold uppercase tracking-widest border-b-2 border-transparent hover:border-white transition-colors pb-1"
               >
-                Start Free
+                Create Account <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </button>
-            </div>
+            </FadeUp>
           </div>
 
-          <div className="relative h-[700px] hidden lg:flex items-center justify-center">
-            {/* Your floating mockups — untouched */}
-            {/* <motion.div
-              initial={{ y: 60, opacity: 0 }}
-              whileInView={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="relative z-20"
-            >
-              <img
-                src="https://images.unsplash.com/photo-1558655146-9f40138ed1cb?w=600&h=800&fit=crop&crop=center"
-                alt="eAson dashboard"
-                className="w-80 rounded-3xl shadow-2xl border border-gray-100"
-              /> */}
-            {/* </motion.div> */}
-            <motion.div
-              initial={{ y: -80, x: 100, rotate: 12 }}
-              whileInView={{ y: -60, x: 120, rotate: 12 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-              className="absolute z-30"
-            >
-              <div className="w-72 h-44 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-2xl p-6 text-white flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-xs opacity-80">Credit Card</div>
-                    <div className="text-lg tracking-wider mt-1">
-                      234 •••• •••• ••••
-                    </div>
-                  </div>
-                  <div className="text-2xl">VISA</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-xs opacity-80">eAson Pay</div>
-                </div>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ y: 100, x: -80, rotate: -8 }}
-              whileInView={{ y: 80, x: -100, rotate: -8 }}
-              transition={{ delay: 0.6, duration: 0.8 }}
-              className="absolute z-10"
-            >
-              <img
-                src="https://images.unsplash.com/photo-1592899677977-9c10ca1104a7?w=300&h=600&fit=crop"
-                alt="eAson mobile"
-                className="w-48 rounded-3xl shadow-2xl border border-gray-100"
-              />
-            </motion.div>
-            <motion.div
-              initial={{ scale: 0 }}
-              whileInView={{ scale: 1 }}
-              transition={{ delay: 0.8 }}
-              className="absolute top-32 left-10 bg-white/90 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-xl border border-gray-100"
-            >
-              <div className="text-2xl font-bold text-emerald-600">
-                Rs 1.2Cr+
-              </div>
-              <div className="text-xs text-gray-600">Daily volume</div>
-            </motion.div>
-            <motion.div
-              initial={{ scale: 0 }}
-              whileInView={{ scale: 1 }}
-              transition={{ delay: 1 }}
-              className="absolute bottom-40 right-20 bg-white/90 backdrop-blur-xl px-5 py-3 rounded-2xl shadow-xl border border-gray-100"
-            >
-              <div className="text-2xl font-bold text-teal-600">8,000+</div>
-              <div className="text-xs text-gray-600">Active traders</div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* TRUST BADGES */}
-      <section className="py-24 md:py-32 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <p className="text-emerald-600 font-medium tracking-wider text-sm uppercase">
-              Trusted by Nepal’s top wholesalers
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-            {/* Your 4 cards — untouched */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              whileHover={{ y: -8 }}
-              className="group"
-            >
-              <div className="p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-emerald-300 transition-all duration-300 h-full">
-                <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-6">
-                  <svg
-                    className="w-8 h-8 text-emerald-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  Verified Suppliers Only
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Every wholesaler is KYC verified. No fakes. No middlemen.
-                </p>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              whileHover={{ y: -8 }}
-              className="group"
-            >
-              <div className="p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-emerald-300 transition-all duration-300 h-full">
-                <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6 overflow-hidden">
-                  <img
-                    src={nepalFlag}
-                    alt="Nepal Flag"
-                    className="w-10 h-10 object-cover"
-                  />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  100% Nepali Team
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Built in Kathmandu. We speak Nepali, understand your market,
-                  and eat momo like you.
-                </p>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              whileHover={{ y: -8 }}
-              className="group"
-            >
-              <div className="p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-emerald-300 transition-all duration-300 h-full">
-                <div className="w-14 h-14 bg-cyan-100 rounded-2xl flex items-center justify-center mb-6">
-                  <svg
-                    className="w-8 h-8 text-cyan-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2.5}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  Instant Local Payments
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  eSewa · Khalti · IME Pay · ConnectIPS · Fonepay — pay in
-                  seconds, not days.
-                </p>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              whileHover={{ y: -8 }}
-              className="group"
-            >
-              <div className="p-8 bg-gray-50 rounded-3xl border border-gray-200 hover:border-emerald-300 transition-all duration-300 h-full">
-                <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-6">
-                  <svg
-                    className="w-8 h-8 text-purple-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  24/7 Real Support
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  Call, chat, or visit our Kathmandu office. Real Nepali team,
-                  always ready.
-                </p>
-              </div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY SHOPS SWITCH */}
-      <section className="py-32 md:py-40 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center text-5xl md:text-7xl font-light tracking-tight text-gray-900"
-            style={{
-              fontFamily: "Neue Montreal, Inter, system-ui, sans-serif",
-            }}
-          >
-            Why shops switch to{" "}
-            <span className="font-normal text-emerald-600">ASON</span>
-          </motion.h2>
-
-          <div className="mt-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left & Right — exactly as you wrote */}
-            {/* ... your full left list and right stacked cards ... */}
-            {/* (keeping your exact code here - unchanged) */}
-            <div className="space-y-16">
-              {benefits.map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.7, delay: i * 0.1 }}
-                  className="group flex items-center gap-6 cursor-default"
-                >
-                  <div className="text-5xl font-light text-gray-300 select-none">
-                    0{i + 1}
-                  </div>
-                  <div className="flex-1">
-                    <h3
-                      className="text-2xl md:text-3xl font-medium text-gray-800 leading-tight transition-colors duration-500 group-hover:text-emerald-600"
-                      style={{
-                        fontFamily:
-                          "Neue Montreal, Inter, system-ui, sans-serif",
-                      }}
-                    >
-                      {item.title}
-                    </h3>
-                    <p className="mt-2 text-gray-500 text-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      {item.desc}
-                    </p>
-                  </div>
-                  <ArrowRight className="w-7 h-7 text-gray-400 opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-3 transition-all duration-500" />
-                </motion.div>
-              ))}
-            </div>
-
-            <div className="relative h-[500px] lg:h-[650px]">
-              {benefits.map((item, i) => {
-                const Icon = item.icon;
-                const colors = {
-                  emerald: "from-emerald-500 to-emerald-600",
-                  blue: "from-blue-500 to-blue-600",
-                  violet: "from-violet-500 to-violet-600",
-                  orange: "from-orange-500 to-orange-600",
-                };
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: i * 0.15, duration: 0.8 }}
-                    className="absolute inset-0 flex items-center justify-center"
-                    style={{ zIndex: i }}
-                    whileHover={{ zIndex: 50, scale: 1.04 }}
-                  >
-                    <div className="absolute inset-10 md:inset-12 rounded-3xl bg-gradient-to-br shadow-2xl transition-all duration-700 hover:shadow-3xl hover:inset-4">
-                      <div
-                        className={`h-full w-full rounded-3xl bg-gradient-to-br ${
-                          colors[item.color]
-                        } relative overflow-hidden`}
-                      >
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-md opacity-0 hover:opacity-100 transition-opacity duration-700 flex flex-col items-center justify-center text-center p-10 text-white">
-                          <Icon className="w-16 h-16 mb-6" />
-                          <h3 className="text-3xl font-semibold mb-3">
-                            {item.title}
-                          </h3>
-                          <p className="text-lg opacity-90 max-w-xs">
-                            {item.desc}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="mt-20 lg:hidden grid grid-cols-2 gap-5">
-            {benefits.map((item, i) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={i}
-                  className="bg-gray-50 rounded-3xl p-8 text-center border border-gray-100"
-                >
-                  <Icon className="w-10 h-10 mx-auto mb-4 text-emerald-600" />
-                  <h4 className="text-lg font-medium text-gray-800">
-                    {item.title.split(" ")[0]}
-                    <br />
-                    {item.title.split(" ").slice(1).join(" ")}
-                  </h4>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* DUAL PERSPECTIVE — Fixed nesting */}
-      <section className="py-32 md:py-44 bg-gray-50/30">
-        <div className="max-w-7xl mx-auto px-6 md:px-12">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center max-w-5xl mx-auto"
-          >
-            <h2 className="text-5xl md:text-7xl lg:text-8xl font-light tracking-tight text-gray-900">
-              One platform.
+          {/* Row 2 — full width "03 GROW" */}
+          <FadeUp className="px-10 py-32 border-b border-white/20 text-center bg-black hover:bg-[#050505] transition-colors">
+            <p className="text-xs text-emerald-400 font-bold uppercase tracking-widest mb-8">03 — GROW</p>
+            <h2 className="text-6xl md:text-[8rem] lg:text-[11rem] font-bold text-white leading-none tracking-tighter uppercase">
+              More margin.
+              <br />
+              <span className="text-emerald-400">Less hustle.</span>
             </h2>
-            <p className="mt-4 text-5xl md:text-7xl lg:text-8xl font-medium bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-              Two realities.
-            </p>
-            <p className="mt-8 text-xl md:text-2xl text-gray-600 font-light">
-              Built for the shop that buys and the supplier that sells.
-            </p>
-          </motion.div>
-
-          <div className="mt-24 md:mt-32 grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
-            {/* Retailer Side — your exact design */}
-            {/* Retailer Side – FINAL VERSION: Clean, English, Premium, Same Height */}
-            <motion.div
-              initial={{ opacity: 0, x: -80 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9 }}
-              className="relative group h-full"
+            <button
+              onClick={() => navigate("/register")}
+              className="mt-16 inline-flex items-center gap-3 px-12 py-5 bg-white text-black text-xs font-bold uppercase tracking-widest rounded-none hover:bg-gray-200 transition-colors"
             >
-              <div className="absolute -inset-4 bg-gradient-to-r from-emerald-100/60 to-teal-100/40 rounded-3xl blur-xl opacity-70 group-hover:opacity-100 transition duration-1000" />
+              Join Free <ArrowRight className="w-5 h-5" />
+            </button>
+          </FadeUp>
+        </div>
+      </section>
 
-              <div className="relative bg-white/95 backdrop-blur-xl rounded-3xl border border-gray-100 shadow-2xl overflow-hidden h-full flex flex-col">
-                <div className="p-10 md:p-12 flex flex-col h-full">
-                  {/* Top Header */}
-                  <div className="flex items-center justify-between mb-10">
+      {/* ══════════════════════════════════════════════════════════════════
+          TRUST PILLS — white section
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-white py-32 border-b border-black">
+        <div className="max-w-screen-2xl mx-auto px-8">
+          <FadeUp>
+            <p className="text-sm font-bold uppercase tracking-widest text-black mb-12 border-b-4 border-black inline-block pb-2">Why Traders Choose Us</p>
+          </FadeUp>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border-t border-l border-gray-200">
+            {trusts.map(({ icon: Icon, label, desc }, i) => (
+              <FadeUp key={i} delay={i * 0.07}>
+                <div className="bg-white p-10 h-full flex flex-col gap-6 border-b border-r border-gray-200 hover:bg-gray-50 transition-colors">
+                  <Icon className="w-8 h-8 text-black" />
+                  <h3 className="text-lg font-bold uppercase tracking-tighter text-black">{label}</h3>
+                  <p className="text-sm text-gray-500 font-medium leading-relaxed">{desc}</p>
+                </div>
+              </FadeUp>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          DUAL: RETAILER + SUPPLIER — dark
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-white py-32">
+        <div className="max-w-screen-2xl mx-auto px-8">
+          <FadeUp className="mb-16">
+            <h2 className="text-5xl md:text-7xl font-bold text-black leading-tight tracking-tighter uppercase">
+              One platform.
+              <br />
+              <span className="text-gray-400">Two realities.</span>
+            </h2>
+          </FadeUp>
+
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Retailer */}
+            <FadeUp delay={0.08}>
+              <div className="group relative bg-[#f9f9f9] border-t-8 border-black rounded-none overflow-hidden hover:bg-gray-100 transition-colors h-full">
+                <div className="p-10 md:p-16">
+                  <div className="flex items-center justify-between mb-12">
                     <div className="flex items-center gap-4">
-                      <div className="p-4 rounded-2xl bg-emerald-600 shadow-xl">
-                        <Store className="w-9 h-9 text-white" />
+                      <div className="w-12 h-12 bg-black flex items-center justify-center">
+                        <Store className="w-5 h-5 text-white" />
                       </div>
-                      <div>
-                        <h3 className="text-3xl font-bold text-gray-900">
-                          For Retailers
-                        </h3>
-                        <p className="text-gray-600 text-sm">
-                          Order in seconds. Never run out.
-                        </p>
-                      </div>
+                      <span className="text-sm font-bold uppercase tracking-widest text-black">For Retailers</span>
                     </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="relative mb-8">
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Search products, brands, categories..."
-                      className="w-full pl-16 pr-6 py-6 rounded-2xl bg-gray-100/70 border border-gray-200 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-100 transition text-lg font-medium"
-                    />
-                  </div>
+                  <h3 className="text-4xl md:text-5xl font-bold text-black mb-4 leading-none tracking-tighter uppercase">Order in seconds.</h3>
+                  <p className="text-gray-500 text-sm font-bold uppercase tracking-widest mb-12">No calls, no travel, no chaos.</p>
 
-                
-                  <div className="space-y-4 flex-1">
+                  {/* Mock order row */}
+                  <div className="space-y-4 mb-12">
                     {[
-                      {
-                        name: "Dabur Chyawanprash 1kg",
-                        price: "Rs 2,340",
-                        qty: "12 jars left",
-                      },
-                      {
-                        name: "Surf Excel Matic 4L",
-                        price: "Rs 3,100",
-                        qty: "6 units left",
-                        hot: true,
-                      },
-                      {
-                        name: "Head & Shoulders 180ml",
-                        price: "Rs 1,890",
-                        qty: "48 pcs left",
-                      },
+                      { name: "Dabur Chyawanprash 1kg",  price: "Rs 2,340", tag: "12 IN STOCK" },
+                      { name: "Surf Excel Matic 4L",      price: "Rs 3,100", tag: "HOT" },
+                      { name: "Head & Shoulders 180ml",   price: "Rs 1,890", tag: null },
                     ].map((item, i) => (
-                      <motion.div
-                        key={i}
-                        whileHover={{ scale: 1.02, x: 8 }}
-                        className="flex items-center gap-5 p-5 rounded-2xl bg-white border border-gray-100 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group/item"
-                      >
-                        <div className="w-16 h-16 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center flex-shrink-0">
-                          <Package className="w-8 h-8 text-gray-500" />
+                      <div key={i} className="flex items-center gap-4 bg-white border border-gray-200 transition-colors p-4 cursor-pointer">
+                        <div className="w-12 h-12 bg-[#f9f9f9] border border-gray-100 flex items-center justify-center shrink-0">
+                          <Package className="w-5 h-5 text-gray-400" />
                         </div>
-
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-900">
-                            {item.name}
-                          </p>
-                          <p className="text-sm text-gray-500 mt-0.5">
-                            {item.qty}
-                          </p>
+                          <p className="text-xs font-bold uppercase tracking-widest text-black">{item.name}</p>
                         </div>
-
-                        <div className="text-right">
-                          <p className="text-xl font-bold text-emerald-600">
-                            {item.price}
-                          </p>
-                          {item.hot && (
-                            <span className="text-xs font-bold text-orange-500 bg-orange-100 px-2 py-1 rounded-full">
-                              HOT
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-bold tracking-tight text-black">{item.price}</p>
+                          {item.tag && (
+                            <span className={`text-[9px] font-bold tracking-widest uppercase px-1.5 py-0.5 border ${item.tag === "HOT" ? "text-red-600 border-red-600" : "text-gray-500 border-gray-200"}`}>
+                              {item.tag}
                             </span>
                           )}
                         </div>
-
-                        <Plus className="w-6 h-6 text-emerald-600 opacity-0 group-hover/item:opacity-100 transition" />
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
 
-                  
-                  <button className="mt-10 w-full py-6 bg-black text-white rounded-2xl font-bold text-lg hover:bg-gray-900 transition shadow-xl flex items-center justify-center gap-3">
-                    <ShoppingBag className="w-6 h-6" />
-                    Start Ordering Now
+                  <button
+                    onClick={() => navigate("/marketplace")}
+                    className="w-full py-5 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 rounded-none"
+                  >
+                    <ShoppingBag className="w-4 h-4" /> Start Shopping
                   </button>
                 </div>
               </div>
-            </motion.div>
+            </FadeUp>
 
-         
-            <motion.div
-              initial={{ opacity: 0, x: 80 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9 }}
-              className="relative group"
-            >
-              <div className="absolute -inset-4 bg-gradient-to-br from-emerald-600/20 to-teal-600/20 rounded-3xl blur-xl" />
-              <div className="relative bg-gradient-to-br from-gray-900 to-black rounded-3xl shadow-2xl overflow-hidden border border-gray-800">
-                <div className="p-10 md:p-12 text-white">
-                  <div className="flex items-center gap-4 mb-10">
-                    <div className="p-4 rounded-2xl bg-emerald-500/20 backdrop-blur">
-                      <Warehouse className="w-8 h-8 text-emerald-400" />
-                    </div>
-                    <h3 className="text-3xl font-medium">For Suppliers</h3>
-                  </div>
-                  <h4 className="text-4xl font-light mb-2">
-                    Your inventory, live
-                  </h4>
-                  <p className="text-gray-400 mb-12">
-                    Real-time orders • Stock alerts • Instant payouts
-                  </p>
-                  <div className="grid grid-cols-3 gap-8 mb-12">
-                    <div>
-                      <div className="text-5xl font-light text-emerald-400">
-                        87
+            {/* Supplier */}
+            <FadeUp delay={0.15}>
+              <div className="relative bg-black rounded-none overflow-hidden h-full">
+                <div className="relative p-10 md:p-16 text-white h-full flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-12">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white flex items-center justify-center">
+                          <Warehouse className="w-5 h-5 text-black" />
+                        </div>
+                        <span className="text-sm font-bold uppercase tracking-widest">For Wholesalers</span>
                       </div>
-                      <p className="text-gray-400 mt-2">Active Products</p>
                     </div>
-                    <div>
-                      <div className="text-5xl font-light">Rs 48.2L</div>
-                      <p className="text-gray-400 mt-2">This Month</p>
-                    </div>
-                    <div>
-                      <div className="text-5xl font-light text-orange-400">
-                        6
-                      </div>
-                      <p className="text-gray-400 mt-2">Low Stock</p>
+
+                    <h3 className="text-4xl md:text-5xl font-bold leading-none tracking-tighter uppercase mb-2">List products.</h3>
+                    <h3 className="text-4xl md:text-5xl font-bold leading-none tracking-tighter text-emerald-400 uppercase mb-4">Watch it sell.</h3>
+                    <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-12">Real-time orders · Stock alerts · Instant payouts</p>
+
+                    {/* Dashboard stats */}
+                    <div className="grid grid-cols-3 gap-4 mb-10">
+                      {[
+                        { val: "87",     sub: "Products"    },
+                        { val: "Rs 48L", sub: "This Month"  },
+                        { val: "6",      sub: "Low Stock"   },
+                      ].map(({ val, sub }, i) => (
+                        <div key={i} className="border border-white/20 p-5 text-center">
+                          <p className="text-2xl font-bold tracking-tighter">{val}</p>
+                          <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2">{sub}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="flex gap-5">
-                    <button className="flex-1 bg-white text-black py-6 rounded-2xl font-medium hover:bg-gray-100 transition flex items-center justify-center gap-3">
-                      <Plus className="w-6 h-6" /> Add Product
+
+                  <div className="flex gap-4 mt-auto">
+                    <button
+                      onClick={() => navigate("/register")}
+                      className="flex-1 py-5 bg-white text-black text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded-none"
+                    >
+                      Join as Supplier
                     </button>
-                    <button className="px-10 py-6 bg-white/10 backdrop-blur rounded-2xl font-medium hover:bg-white/20 transition flex items-center gap-3">
-                      View Orders <ArrowRight className="w-5 h-5" />
+                    <button
+                      onClick={() => navigate("/marketplace")}
+                      className="px-6 py-5 border border-white/30 hover:bg-white hover:text-black transition-colors flex items-center justify-center rounded-none"
+                    >
+                      <ArrowRight className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </FadeUp>
           </div>
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="relative py-32 md:py-40 overflow-hidden bg-gradient-to-br from-emerald-600 via-teal-700 to-cyan-800">
-      
-        <div className="absolute inset-0">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-cyan-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      {/* ══════════════════════════════════════════════════════════════════
+          TESTIMONIALS — stark
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-[#111] py-32 overflow-hidden border-t border-white/20">
+        <div className="max-w-screen-2xl mx-auto px-8 mb-16">
+          <FadeUp>
+            <p className="text-sm font-bold uppercase tracking-widest text-white mb-4 border-b-4 border-white inline-block pb-2">What Traders Say</p>
+          </FadeUp>
         </div>
-
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
-        
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="text-7xl md:text-9xl font-medium tracking-tighter text-white"
-            style={{ fontFamily: "Satoshi, system-ui, sans-serif" }}
-          >
-            No more 5AM.
-          </motion.h2>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 1 }}
-            className="mt-8 text-2xl md:text-3xl font-light text-white/80 tracking-tight"
-            style={{ fontFamily: "Satoshi, system-ui, sans-serif" }}
-          >
-            8,000+ shops already quit the market rush.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.8 }}
-            className="mt-16 flex flex-col sm:flex-row gap-6 justify-center items-center"
-          >
-            <button className="group px-14 py-7 bg-white text-black rounded-full text-2xl font-medium hover:scale-105 transition-all duration-300 shadow-2xl flex items-center gap-4" onClick={() => navigate("/register")}>
-              Start Buying Free
-              <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition" />
-            </button>
-
-           <button
-              className="group px-14 py-7 bg-white text-black rounded-full text-2xl font-medium hover:scale-105 transition-all duration-300 shadow-2xl flex items-center gap-4"
-              onClick={() => navigate("/marketplace")}
+        <div className="flex px-8 overflow-x-auto scrollbar-hide snap-x gap-6">
+          {[
+            { q: "Saved me 5 hours every week. No more 5AM market trips.", n: "Ramesh K.",  r: "Retailer · Asan, KTM"       },
+            { q: "Orders flow while I sleep. This is how business should feel.", n: "Sunita M.",  r: "Wholesaler · Bhotebahal"    },
+            { q: "Prices are real. No bargaining nonsense. Love it.", n: "Bikash T.",  r: "Retailer · Kalimati"         },
+            { q: "My stock reaches shops I didn't even know existed.", n: "Priya S.",   r: "Supplier · Newroad, KTM"    },
+            { q: "Cart to checkout in under 2 minutes. Insane.", n: "Anil R.",   r: "Retailer · Patan"            },
+          ].map((t, i) => (
+            <div
+              key={i}
+              className="shrink-0 w-80 lg:w-96 border border-white/20 p-8 sm:p-10 bg-black hover:border-white transition-colors snap-center"
             >
-              Browse & Buy Now
-              <ArrowRight className="w-7 h-7 group-hover:translate-x-2 transition" />
-            </button>
-          </motion.div>
-
-          {/* Tiny trust line — barely there, but powerful */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="mt-10 text-white/60 text-sm tracking-wider"
-            style={{ fontFamily: "Satoshi, system-ui, sans-serif" }}
-          >
-            NO CARD • NO FEES • CANCEL ANYTIME
-          </motion.p>
+              <p className="text-xl font-bold tracking-tighter text-white uppercase leading-tight mb-10">"{t.q}"</p>
+              <div>
+                <p className="text-sm font-bold text-white tracking-widest uppercase">{t.n}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">{t.r}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-       <Footer/>
+      {/* ══════════════════════════════════════════════════════════════════
+          FINAL CTA — full black, massive type, Nike-like
+      ══════════════════════════════════════════════════════════════════ */}
+      <section className="bg-white relative overflow-hidden py-32 border-t border-black">
+        <div className="max-w-screen-2xl mx-auto px-8">
+          <FadeUp>
+            <h2 className="text-[clamp(4.5rem,14vw,11rem)] font-bold text-black leading-[0.85] tracking-tighter uppercase mb-10">
+              No more<br />
+              <span className="text-gray-300">5 AM.</span>
+            </h2>
+
+            <p className="text-gray-500 text-lg font-bold tracking-widest uppercase max-w-lg leading-relaxed mb-16">
+              8,000+ shops already quit the market rush.
+              Built in Nepal. For Nepal.
+            </p>
+
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={() => navigate("/register")}
+                className="group flex items-center gap-3 px-12 py-6 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors rounded-none"
+              >
+                Start for Free
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+              </button>
+              <button
+                onClick={() => navigate("/marketplace")}
+                className="flex items-center gap-3 px-12 py-6 border-2 border-black text-black text-xs font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-colors rounded-none"
+              >
+                Browse Marketplace
+              </button>
+            </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      <Footer />
     </>
   );
 }

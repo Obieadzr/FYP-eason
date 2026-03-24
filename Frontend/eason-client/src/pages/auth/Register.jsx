@@ -1,8 +1,9 @@
 // src/pages/auth/Register.jsx
 import React, { useState, Suspense } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight, Check } from "lucide-react";
 import API from "../../utils/api.js";
+import { motion, AnimatePresence } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere, MeshWobbleMaterial, Torus } from "@react-three/drei";
 
@@ -12,7 +13,6 @@ const FiberScene = () => (
     <directionalLight position={[10, 10, 5]} intensity={1.5} color="#10b981" />
     <directionalLight position={[-10, -5, -5]} intensity={0.5} color="#14b8a6" />
     <pointLight position={[0, 0, 3]} intensity={1} color="#fff" />
-
     <Float speed={1.5} rotationIntensity={0.6} floatIntensity={1.5}>
       <Sphere args={[1, 128, 128]} scale={2.8}>
         <MeshDistortMaterial color="#10b981" distort={0.35} speed={2.5} roughness={0.05} metalness={0.95} transparent opacity={0.18} />
@@ -33,21 +33,24 @@ const FiberScene = () => (
         <MeshWobbleMaterial color="#34d399" factor={0.3} speed={1.5} roughness={0.1} metalness={0.9} transparent opacity={0.35} />
       </Torus>
     </Float>
-    <Float speed={4} rotationIntensity={2} floatIntensity={3}>
-      <Sphere args={[1, 32, 32]} scale={0.5} position={[-1.5, 2, 0]}>
-        <MeshDistortMaterial color="#6ee7b7" distort={0.6} speed={4} roughness={0} metalness={1} transparent opacity={0.5} />
-      </Sphere>
-    </Float>
   </Canvas>
 );
 
+const Field = ({ label, children }) => (
+  <div>
+    <label className="block text-xs font-bold text-white/50 uppercase tracking-widest mb-2">{label}</label>
+    {children}
+  </div>
+);
+
+const inputCls = "w-full bg-white/5 border border-white/20 text-white placeholder-white/30 text-sm px-4 py-4 rounded-none focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-colors duration-300";
+
 const Register = () => {
   const navigate = useNavigate();
-  const [showPass, setShowPass] = useState(false);
+  const [showPass, setShowPass]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
   const [formData, setFormData] = useState({
     fname: "", lname: "", email: "", password: "", confirmPassword: "", role: "retailer",
   });
@@ -58,6 +61,7 @@ const Register = () => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) return setError("Passwords don't match");
     setLoading(true);
+    setError("");
     try {
       await API.post("/auth/register", {
         firstName: formData.fname,
@@ -68,117 +72,173 @@ const Register = () => {
       });
       navigate("/login");
     } catch (err) {
-      setError(err.response?.data?.message || "Something went wrong");
+      setError(err.response?.data?.message || "Registration failed. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const inputCls = "w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-emerald-500/60 focus:bg-white/8 transition-all text-base";
+  const strength = formData.password.length >= 8 && /[A-Z]/.test(formData.password) && /[0-9]/.test(formData.password);
 
   return (
-    <>
-      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-
-      <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-
-        {/* LEFT */}
-        <div className="hidden lg:flex flex-1 relative overflow-hidden bg-[#030a06]">
-          <div className="absolute inset-0">
-            <Suspense fallback={null}><FiberScene /></Suspense>
-          </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/20" />
-
-          <div className="relative z-10 flex flex-col justify-between p-14 w-full">
-            <div onClick={() => navigate("/")} className="text-xl font-semibold text-white cursor-pointer hover:opacity-75 transition tracking-tight">
-              eAson<span className="text-emerald-400">.</span>
-            </div>
-
-            <div>
-              <h1 className="text-5xl xl:text-6xl font-light text-white leading-tight tracking-tight">
-                Wholesale,<br />
-                <span className="font-semibold text-emerald-400">without the chaos.</span>
-              </h1>
-              <p className="text-gray-500 mt-5 text-base font-normal max-w-xs leading-relaxed">
-                Order from suppliers across Kathmandu without leaving your shop.
-              </p>
-            </div>
-
-            <div className="text-xs text-gray-700 tracking-wide">© 2025 eAson</div>
-          </div>
-        </div>
-
-        {/* RIGHT */}
-        <div className="flex-1 bg-[#09090b] flex items-center justify-center px-6 py-16 relative">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-900/15 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="w-full max-w-md relative z-10">
-            <div className="lg:hidden mb-10">
-              <span onClick={() => navigate("/")} className="text-xl font-semibold text-white cursor-pointer">
-                eAson<span className="text-emerald-400">.</span>
-              </span>
-            </div>
-
-            <div className="mb-8">
-              <h2 className="text-3xl font-semibold text-white tracking-tight">Create an account</h2>
-              <p className="text-gray-500 mt-2 text-sm">Fill in below to get started</p>
-            </div>
-
-            {error && (
-              <div className="mb-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
-                {error}
+    <div className="min-h-screen bg-[#080808] grid lg:grid-cols-2" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
+      {/* Left — 3D scene */}
+      <div className="relative hidden lg:block overflow-hidden">
+        <Suspense fallback={null}>
+          <FiberScene />
+        </Suspense>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#080808]/60" />
+        <div className="absolute bottom-16 left-16 right-16">
+          <h1 className="text-5xl font-light text-white leading-tight tracking-tighter">
+            Wholesale,<br />
+            <span className="text-emerald-400 font-semibold">without the chaos.</span>
+          </h1>
+          <p className="mt-4 text-white/40 text-sm leading-relaxed max-w-xs">
+            Join 8,000+ Nepali traders who order wholesale in seconds — no market trips, no middlemen.
+          </p>
+          <div className="mt-8 flex items-center gap-4">
+            {["No fees", "Cancel anytime", "Instant access"].map(t => (
+              <div key={t} className="flex items-center gap-1.5 text-xs text-white/40">
+                <Check className="w-3.5 h-3.5 text-emerald-400" /> {t}
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-3.5">
-              <div className="grid grid-cols-2 gap-3">
-                <input type="text" name="fname" placeholder="First name" required value={formData.fname} onChange={handleChange} className={inputCls} />
-                <input type="text" name="lname" placeholder="Last name" required value={formData.lname} onChange={handleChange} className={inputCls} />
-              </div>
-
-              <input type="email" name="email" placeholder="Email address" required value={formData.email} onChange={handleChange} className={inputCls} />
-
-              <select
-                name="role" value={formData.role} onChange={handleChange}
-                className={`${inputCls} cursor-pointer`}
-                style={{
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236b7280' viewBox='0 0 20 20'%3E%3Cpath d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: "no-repeat", backgroundPosition: "right 1rem center", backgroundSize: "1.25em", appearance: "none",
-                }}
-              >
-                <option value="retailer" className="bg-zinc-900">I'm a retailer — I want to buy</option>
-                <option value="wholesaler" className="bg-zinc-900">I'm a wholesaler — I want to sell</option>
-              </select>
-
-              <div className="relative">
-                <input type={showPass ? "text" : "password"} name="password" placeholder="Password" required value={formData.password} onChange={handleChange} className={`${inputCls} pr-12`} />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <div className="relative">
-                <input type={showConfirm ? "text" : "password"} name="confirmPassword" placeholder="Confirm password" required value={formData.confirmPassword} onChange={handleChange} className={`${inputCls} pr-12`} />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition">
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <button type="submit" disabled={loading}
-                className="w-full mt-1 py-4 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-500 disabled:opacity-50 transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><span>Create account</span><ArrowRight className="w-4 h-4" /></>}
-              </button>
-            </form>
-
-            <p className="text-center mt-7 text-gray-600 text-sm">
-              Already have an account?{" "}
-              <Link to="/login" className="text-emerald-400 hover:text-emerald-300 transition font-medium">Sign in</Link>
-            </p>
+            ))}
           </div>
         </div>
       </div>
-    </>
+
+      {/* Right — form */}
+      <div className="flex items-center justify-center px-8 py-16">
+        <motion.div
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-md"
+        >
+          {/* Logo */}
+          <Link to="/" className="inline-block text-xl font-bold tracking-widest uppercase text-white mb-12">
+            eAson<span className="text-white">.</span>
+          </Link>
+
+          <h2 className="text-4xl font-bold tracking-tighter text-white mb-2">Create account</h2>
+          <p className="text-white/50 text-sm mb-12 uppercase tracking-widest font-bold">
+            Already have one?{" "}
+            <Link to="/login" className="text-white hover:text-gray-300 transition-colors">
+              Sign in
+            </Link>
+          </p>
+
+          {/* Role toggle */}
+          <div className="flex border border-white/20 mb-10">
+            {["retailer", "wholesaler"].map(r => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setFormData({ ...formData, role: r })}
+                className={`flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-colors ${
+                  formData.role === r
+                    ? "bg-white text-black"
+                    : "text-white/50 hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="First name">
+                <input name="fname" value={formData.fname} onChange={handleChange}
+                  placeholder="Aarav" required autoComplete="given-name"
+                  className={inputCls} />
+              </Field>
+              <Field label="Last name">
+                <input name="lname" value={formData.lname} onChange={handleChange}
+                  placeholder="Thapa" required autoComplete="family-name"
+                  className={inputCls} />
+              </Field>
+            </div>
+
+            <Field label="Email">
+              <input type="email" name="email" value={formData.email} onChange={handleChange}
+                placeholder="aarav@example.com" required autoComplete="email"
+                className={inputCls} />
+            </Field>
+
+            <Field label="Password">
+              <div className="relative">
+                <input
+                  type={showPass ? "text" : "password"}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Min. 8 characters"
+                  required
+                  className={`${inputCls} pr-11`}
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
+                  {showPass ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                </button>
+              </div>
+              {formData.password.length > 0 && (
+                <div className={`mt-1.5 text-[11px] font-medium ${strength ? "text-emerald-400" : "text-amber-400"}`}>
+                  {strength ? "✓ Strong password" : "Use 8+ chars, a number, and uppercase"}
+                </div>
+              )}
+            </Field>
+
+            <Field label="Confirm password">
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Repeat password"
+                  required
+                  className={`${inputCls} pr-11`}
+                />
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
+                  {showConfirm ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                </button>
+              </div>
+            </Field>
+
+            <AnimatePresence>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="text-white text-xs bg-red-600 border border-red-500 px-4 py-4 uppercase tracking-widest font-bold text-center"
+                >
+                  {error}
+                </motion.p>
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileTap={{ scale: 0.98 }}
+              className="w-full py-5 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 mt-6 text-sm"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {loading ? "Creating account..." : "Create Account"}
+              {!loading && <ArrowRight className="w-5 h-5" />}
+            </motion.button>
+          </form>
+
+          <p className="mt-8 text-center text-white/20 text-xs">
+            By signing up you agree to our{" "}
+            <a href="#" className="text-white/40 hover:text-white transition">Terms</a> and{" "}
+            <a href="#" className="text-white/40 hover:text-white transition">Privacy Policy</a>.
+          </p>
+        </motion.div>
+      </div>
+    </div>
   );
 };
 

@@ -57,10 +57,10 @@ export default function DashboardLayout({ children }) {
       />
       <FiberBg />
 
-      <div className="h-screen flex bg-gradient-to-br from-emerald-50 via-white to-teal-50 font-['Satoshi'] overflow-hidden">
+      <div className="h-screen flex bg-white tracking-widest overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
         {/* Sidebar */}
         <aside
-          className={`bg-white/90 backdrop-blur-3xl border-r border-white/50 shadow-2xl flex flex-col transition-all duration-500 ${
+          className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-500 ${
             sidebarCollapsed ? "w-20" : "w-80"
           }`}
         >
@@ -68,20 +68,20 @@ export default function DashboardLayout({ children }) {
             {!sidebarCollapsed && (
               <motion.h1
                 onClick={() => navigate("/")}
-                className="text-2xl font-bold text-gray-900 cursor-pointer hover:opacity-80 transition"
-                whileHover={{ scale: 1.05 }}
+                className="text-xl font-bold tracking-widest uppercase text-black cursor-pointer hover:opacity-70 transition-opacity"
+                whileHover={{ scale: 1.02 }}
               >
-                eAson<span className="text-emerald-600">.</span>
+                eAson<span className="text-black">.</span>
               </motion.h1>
             )}
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-3 hover:bg-gray-100 rounded-2xl transition"
+              className="p-3 hover:bg-gray-100 transition-colors"
             >
               {sidebarCollapsed ? (
-                <Menu className="w-5 h-5 text-gray-600" />
+                <Menu className="w-5 h-5 text-black" />
               ) : (
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+                <ChevronLeft className="w-5 h-5 text-black" />
               )}
             </button>
           </div>
@@ -94,13 +94,13 @@ export default function DashboardLayout({ children }) {
                   <NavLink key={item.to} to={item.to} end>
                     <motion.div
                       whileHover={{ x: 6 }}
-                      className={`flex items-center h-16 rounded-2xl transition-all ${
-                        active ? "bg-emerald-600 text-white shadow-lg" : "hover:bg-gray-100 text-gray-700"
+                      className={`flex items-center h-16 transition-colors duration-300 ${
+                        active ? "bg-black text-white font-bold" : "hover:bg-[#f9f9f9] text-gray-500 hover:text-black font-bold"
                       }`}
                     >
-                      <div className="flex items-center gap-5 px-6 w-full">
-                        <item.icon className="w-6 h-6" />
-                        {!sidebarCollapsed && <span className="font-medium text-base">{item.label}</span>}
+                      <div className="flex items-center gap-5 px-6 w-full uppercase text-xs tracking-widest">
+                        <item.icon className="w-5 h-5" />
+                        {!sidebarCollapsed && <span>{item.label}</span>}
                       </div>
                     </motion.div>
                   </NavLink>
@@ -109,19 +109,19 @@ export default function DashboardLayout({ children }) {
             </div>
           </nav>
 
-          <div className="p-6 border-t border-gray-100">
+          <div className="p-6 border-t border-gray-200">
             <div
-              className={`flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white ${
+              className={`flex items-center gap-4 p-4 border border-gray-200 hover:border-black transition-colors bg-white text-black ${
                 sidebarCollapsed && "justify-center"
               }`}
             >
-              <div className="w-12 h-12 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center font-bold text-xl">
+              <div className="w-12 h-12 bg-black text-white flex items-center justify-center font-bold text-xl uppercase">
                 {user?.fullName?.[0] || "A"}
               </div>
               {!sidebarCollapsed && (
                 <div>
-                  <p className="font-semibold">{user?.fullName || "Admin"}</p>
-                  <p className="text-xs opacity-90">{user?.email}</p>
+                  <p className="font-bold tracking-tight text-sm uppercase">{user?.fullName || "Admin"}</p>
+                  <p className="text-xs text-gray-500 uppercase tracking-widest mt-1">{user?.email}</p>
                 </div>
               )}
             </div>
@@ -129,32 +129,32 @@ export default function DashboardLayout({ children }) {
         </aside>
 
         {/* Main Area */}
-        <div className="flex-1 flex flex-col">
-          <header className="h-20 bg-white/80 backdrop-blur-3xl border-b border-gray-100 flex items-center justify-between px-8">
+        <div className="flex-1 flex flex-col bg-[#f9f9f9]">
+          <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-8">
             <div className="flex items-center gap-6 flex-1">
-              <button className="lg:hidden p-3 hover:bg-gray-100 rounded-2xl">
-                <Menu className="w-6 h-6" />
+              <button className="lg:hidden p-3 hover:bg-gray-100 transition-colors">
+                <Menu className="w-6 h-6 text-black" />
               </button>
               <div className="relative max-w-md w-full">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Search anything..."
-                  className="w-full pl-14 pr-6 py-4 bg-gray-100/70 border border-gray-200 rounded-2xl focus:outline-none focus:border-emerald-500 transition placeholder:text-gray-500"
+                  placeholder="SEARCH ANYTHING..."
+                  className="w-full pl-14 pr-6 py-4 bg-[#f9f9f9] border border-gray-200 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors rounded-none placeholder:uppercase placeholder:tracking-widest placeholder:text-gray-400 text-sm font-bold tracking-widest text-black"
                 />
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="relative p-3 hover:bg-gray-100 rounded-2xl">
-                <Bell className="w-6 h-6 text-gray-600" />
-                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white"></span>
+              <button className="relative p-3 hover:bg-gray-100 transition-colors">
+                <Bell className="w-6 h-6 text-black" />
+                <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-black rounded-full border-2 border-white"></span>
               </button>
               <button
                 onClick={() => {
                   logout();
                   navigate("/", { replace: true });
                 }}
-                className="p-3 hover:bg-gray-100 rounded-2xl text-gray-600"
+                className="p-3 hover:bg-gray-100 text-black transition-colors"
               >
                 <LogOut className="w-6 h-6" />
               </button>
