@@ -1,8 +1,9 @@
-// C:\FYP\backend\routes\orderController.js
+// backend/controllers/orderController.js
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
 import User from "../models/User.js";
 import { sendOrderConfirmation } from "../utils/email.js";
+import mongoose from "mongoose";
 
 export const createOrder = async (req, res) => {
   try {
@@ -14,45 +15,54 @@ export const createOrder = async (req, res) => {
     }
 
     if (!shippingAddress?.trim() || !phone?.trim()) {
-      return res.status(400).json({ success: false, message: "Shipping address and phone number are required" });
+      return res.status(400).json({ success: false, message: "Shipping address and phone are required" });
     }
 
     const orderItems = [];
     let totalAmount = 0;
 
-    console.log(`Creating order for user ${userId} with ${items.length} items`);
-
+    // Atomic stock decrement — uses $inc with $gte guard to prevent overselling
     for (const cartItem of items) {
-      const product = await Product.findById(cartItem._id);
-      if (!product) {
-        return res.status(404).json({ success: false, message: `Product not found: ${cartItem._id}` });
-      }
+      const updated = await Product.findOneAndUpdate(
+        { _id: cartItem._id, stock: { $gte: cartItem.quantity } },
+        { $inc: { stock: -cartItem.quantity } },
+        { new: true }
+      );
 
-      if (product.stock < cartItem.quantity) {
+      if (!updated) {
+        // Either product not found or insufficient stock
+        const product = await Product.findById(cartItem._id);
+        if (!product) {
+          return res.status(404).json({ success: false, message: `Product not found: ${cartItem._id}` });
+        }
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for "${product.name}". Only ${product.stock} available.`
+          message: `Insufficient stock for "${product.name}". Only ${product.stock} left.`,
         });
       }
 
-      const priceAtOrderTime = product.wholesalerPrice;
-
       orderItems.push({
-        product: product._id,
+        product: updated._id,
         quantity: cartItem.quantity,
-        pricePerUnit: priceAtOrderTime,
+        pricePerUnit: updated.wholesalerPrice,
       });
-
-      totalAmount += priceAtOrderTime * cartItem.quantity;
+      totalAmount += updated.wholesalerPrice * cartItem.quantity;
     }
 
-    const platformFee = totalAmount * 0.02;
+    // Server-side tax calculation (13% Nepal VAT)
+    const TAX_RATE = 0.13;
+    const taxAmount = Math.round(totalAmount * TAX_RATE * 100) / 100;
+    const grandTotal = Math.round((totalAmount + taxAmount) * 100) / 100;
+
+    const platformFee = Math.round(totalAmount * 0.02 * 100) / 100;
     const wholesalerPayout = totalAmount - platformFee;
 
-    const order = new Order({
+    const order = await Order.create({
       user: userId,
       items: orderItems,
       totalAmount,
+      taxAmount,
+      grandTotal,
       platformFee,
       wholesalerPayout,
       shippingAddress,
@@ -62,45 +72,33 @@ export const createOrder = async (req, res) => {
       paymentStatus: "pending",
     });
 
-    await order.save();
-
-    // Decrease stock (non-atomic – fine for demo/viva)
-    for (const item of orderItems) {
-      await Product.findByIdAndUpdate(item.product, {
-        $inc: { stock: -item.quantity }
-      });
-    }
-
-    console.log(`SUCCESS: Order created ${order._id} | Stock updated for ${orderItems.length} items`);
+    console.log(`Order created: ${order._id} | Subtotal: ${totalAmount} | Tax: ${taxAmount} | Grand: ${grandTotal}`);
 
     // Send email (non-blocking)
     try {
-      const buyer = await User.findById(userId).select('email fullName');
+      const buyer = await User.findById(userId).select("email fullName");
       if (buyer?.email) {
-        await sendOrderConfirmation(order, buyer);
-        console.log(`Confirmation email sent to ${buyer.email}`);
+        sendOrderConfirmation(order, buyer).catch(console.error);
       }
     } catch (emailErr) {
-      console.error("Email failed (non-critical):", emailErr.message);
+      console.error("Email setup failed (non-critical):", emailErr.message);
     }
 
     res.status(201).json({
       success: true,
-      message: "Order placed successfully (Cash on Delivery)",
+      message: "Order placed successfully",
       order: {
         _id: order._id,
         totalAmount: order.totalAmount,
+        taxAmount: order.taxAmount,
+        grandTotal: order.grandTotal,
         status: order.status,
         createdAt: order.createdAt,
       },
     });
   } catch (err) {
-    console.error("Order creation FAILED:", err.message, err.stack);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create order",
-      error: err.message,
-    });
+    console.error("Order creation FAILED:", err.message);
+    res.status(500).json({ success: false, message: "Failed to create order", error: err.message });
   }
 };
 
@@ -117,4 +115,4 @@ export const updateOrderStatus = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
-};
+};

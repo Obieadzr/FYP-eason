@@ -76,7 +76,7 @@ export const sendOrderStatusUpdate = async (order, user, newStatus) => {
       <p>Your order has been updated:</p>
       
       <h3 style="margin-top: 24px;">Order #${order._id.toString().slice(-8).toUpperCase()}</h3>
-      <p><strong>New Status:</strong> <span style="font-weight: bold; color: $$   {statusColor};">   $${newStatus.toUpperCase()}</span></p>
+      <p><strong>New Status:</strong> <span style="font-weight: bold; color: ${statusColor};">${newStatus.toUpperCase()}</span></p>
       <p><strong>Total Amount:</strong> Rs ${order.totalAmount.toLocaleString('en-NP')}</p>
       <p><strong>Updated At:</strong> ${new Date().toLocaleString('en-NP')}</p>
       

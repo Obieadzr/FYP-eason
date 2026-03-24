@@ -11,8 +11,7 @@ const router = express.Router();
 // POST /api/orders - Place new order (Cash on Delivery)
 router.post("/", authMiddleware, createOrder);
 
-// PUT /api/orders/:id/status - Update order status
-router.put("/:id/status", authMiddleware, updateOrderStatus);
+
 
 // GET /api/orders/my-orders - Get current user's orders
 router.get("/my-orders", authMiddleware, async (req, res) => {
@@ -30,6 +29,39 @@ router.get("/my-orders", authMiddleware, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch your orders",
+      error: err.message,
+    });
+  }
+});
+
+// GET /api/orders/wholesaler - Get orders containing this wholesaler's products
+router.get("/wholesaler", authMiddleware, async (req, res) => {
+  if (req.user.role !== "wholesaler") {
+    return res.status(403).json({ success: false, message: "Not authorized" });
+  }
+
+  try {
+    const orders = await Order.find()
+      .populate("user", "firstName lastName email")
+      .populate({
+        path: "items.product",
+        select: "name image wholesalerPrice wholesaler",
+      })
+      .sort({ createdAt: -1 });
+
+    const wholesalerOrders = orders.filter(order => 
+      order.items.some(item => item.product?.wholesaler?.toString() === req.user.id)
+    );
+
+    res.json({
+      success: true,
+      orders: wholesalerOrders,
+    });
+  } catch (err) {
+    console.error("Failed to fetch wholesaler orders:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch orders",
       error: err.message,
     });
   }

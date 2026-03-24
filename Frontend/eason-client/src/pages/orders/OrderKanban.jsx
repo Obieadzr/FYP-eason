@@ -52,7 +52,7 @@ export default function OrderKanban() {
       try {
         // In a real scenario, this fetches all orders for the wholesaler/admin.
         // We'll reuse my-orders for demo, but backend needs fetching logic.
-        const { data } = await API.get("/orders/my-orders");
+        const { data } = await API.get("/orders/wholesaler");
         setOrders(data || []);
       } catch (err) {
         console.error(err);

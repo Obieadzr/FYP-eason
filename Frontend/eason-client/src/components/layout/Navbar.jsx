@@ -56,7 +56,7 @@ export default function Navbar() {
         <div className="px-6 py-4 flex items-center justify-between">
           {/* Logo */}
           <motion.button
-            onClick={() => navigate("/")}
+            onClick={() => navigate(isAuthenticated ? "/marketplace" : "/")}
             whileTap={{ scale: 0.97 }}
             className={`text-xl font-bold tracking-tight transition-colors ${scrolled ? "text-gray-900" : "text-white"}`}
           >
@@ -105,18 +105,13 @@ export default function Navbar() {
             )}
 
             {isAuthenticated && user ? (
-              /* Avatar with dropdown */
-              <div className="relative" ref={dropdownRef}>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setDropdownOpen(o => !o)}
-                  className="flex items-center gap-2"
+              <div className="avatar-dropdown-root relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm hover:shadow-lg transition-all"
                 >
-                  <div className="w-9 h-9 bg-emerald-600 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-md">
-                    {user.firstName?.[0]?.toUpperCase() || "U"}
-                  </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${scrolled ? "text-gray-500" : "text-white/60"} ${dropdownOpen ? "rotate-180" : ""}`} />
-                </motion.button>
+                  {user?.fullName?.[0]?.toUpperCase() || user?.firstName?.[0]?.toUpperCase() || "U"}
+                </button>
 
                 <AnimatePresence>
                   {dropdownOpen && (
@@ -125,29 +120,40 @@ export default function Navbar() {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 8, scale: 0.96 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-100 shadow-xl z-50 py-1"
+                      className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 shadow-xl z-50 py-1 rounded-xl overflow-hidden"
                     >
-                      <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-xs font-bold text-gray-900">{user.firstName} {user.lastName}</p>
-                        <p className="text-[11px] text-gray-400 capitalize">{user.role}</p>
+                      {/* User info header */}
+                      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                        <p className="text-sm font-bold text-gray-900 truncate">{user?.fullName || `${user?.firstName} ${user?.lastName}`}</p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email}</p>
                       </div>
-                      {[
-                        { label: "My Orders",  icon: Package, action: () => { setDropdownOpen(false); navigate("/orders"); }},
-                        { label: "My Profile", icon: User,    action: () => { setDropdownOpen(false); navigate("/profile"); }},
-                      ].map(({ label, icon: Icon, action }) => (
-                        <button key={label} onClick={action}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition text-left">
-                          <Icon className="w-4 h-4 text-gray-400" />
-                          {label}
-                        </button>
-                      ))}
-                      <div className="border-t border-gray-100 mt-1">
+
+                      {/* Menu items */}
+                      <div className="py-1">
                         <button
-                          onClick={() => { setDropdownOpen(false); logout(); navigate("/"); }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition"
+                          onClick={() => { navigate("/orders"); setDropdownOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <Package className="w-4 h-4 text-gray-400" />
+                          My Orders
+                        </button>
+                        <button
+                          onClick={() => { navigate("/profile"); setDropdownOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
+                          <User className="w-4 h-4 text-gray-400" />
+                          My Profile
+                        </button>
+                      </div>
+
+                      {/* Logout */}
+                      <div className="border-t border-gray-100 py-1">
+                        <button
+                          onClick={() => { logout(); navigate("/"); setDropdownOpen(false); }}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
-                          Logout
+                          Sign out
                         </button>
                       </div>
                     </motion.div>

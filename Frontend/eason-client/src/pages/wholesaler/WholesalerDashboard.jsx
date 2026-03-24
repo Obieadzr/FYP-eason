@@ -60,10 +60,10 @@ function ProductModal({ product, categories, onClose, onSave }) {
       const fd = new FormData();
       Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== "") fd.append(k, v); });
       if (isEdit) {
-        await API.put(`/products/${product._id}`, fd, { headers: { "Content-Type": "multipart/form-data" } });
+        await API.put(`/products/${product._id}`, fd);
         toast.success("Product updated!");
       } else {
-        await API.post("/products", fd, { headers: { "Content-Type": "multipart/form-data" } });
+        await API.post("/products", fd);
         toast.success("Product added!");
       }
       onSave();

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/authStore";
 
@@ -15,6 +15,8 @@ import PendingApproval from "./pages/auth/PendingApproval.jsx";
 import OrderSuccess from "./pages/orders/OrderSuccess.jsx";
 import OrderKanban from "./pages/orders/OrderKanban.jsx";
 import Profile from "./pages/auth/Profile.jsx";
+import Settings from "./pages/auth/Settings.jsx";
+import WholesalerDashboard from "./pages/wholesaler/WholesalerDashboard.jsx";
 
 // Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
@@ -29,6 +31,24 @@ import Units from "./pages/dashboard/Units.jsx";
 import Products from "./pages/dashboard/Products.jsx";
 import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx"; // renamed to avoid confusion
 import VerificationQueue from "./pages/dashboard/VerificationQueue.jsx";
+
+const NotFound = () => {
+  const navigate = useNavigate();
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="text-center p-8">
+        <h1 className="text-8xl font-bold text-gray-900 mb-4">404</h1>
+        <p className="text-2xl text-gray-600 mb-8">Page not found</p>
+        <button
+          onClick={() => navigate("/")}
+          className="inline-block px-10 py-5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition shadow-lg"
+        >
+          Back to Home
+        </button>
+      </div>
+    </div>
+  );
+};
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -126,24 +146,37 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/dashboard/products/edit/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout>
+                <AddProductDashboard />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/wholesaler"
+          element={
+            <ProtectedRoute allowedRoles={["wholesaler", "admin"]}>
+              <WholesalerDashboard />
+            </ProtectedRoute>
+          }
+        />
 
         {/* 404 */}
         <Route
           path="*"
-          element={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-              <div className="text-center p-8">
-                <h1 className="text-8xl font-bold text-gray-900 mb-4">404</h1>
-                <p className="text-2xl text-gray-600 mb-8">Page not found</p>
-                <button
-                  onClick={() => navigate("/")}
-                  className="inline-block px-10 py-5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition shadow-lg"
-                >
-                  Back to Home
-                </button>
-              </div>
-            </div>
-          }
+          element={<NotFound />}
         />
       </Routes>
     </BrowserRouter>

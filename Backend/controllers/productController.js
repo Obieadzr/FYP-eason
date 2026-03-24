@@ -1,9 +1,15 @@
 // backend/controllers/productController.js
-import Product from "../models/Product.js"; // ← correct default import
+import Product from "../models/Product.js";
 import path from "path";
+import { fileURLToPath } from "url";
 import fs from "fs/promises";
 
+// ESM-compatible __dirname (same pattern as app.js)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 export const createProduct = async (req, res) => {
+  console.log("[createProduct] Request received. Files:", req.files?.length ?? 0, "Body keys:", Object.keys(req.body || {}));
   try {
     const { name, category, unit, baseCost, wholesalerPrice, stock, description } = req.body;
 
@@ -21,34 +27,30 @@ export const createProduct = async (req, res) => {
     }
 
     if (wholesalerPriceNum < baseCostNum) {
-      return res.status(400).json({
-        message: "Wholesaler price cannot be less than base cost",
-      });
+      return res.status(400).json({ message: "Wholesaler price cannot be less than base cost" });
     }
 
-    let imagePaths = [];
-    if (req.files && req.files.length > 0) {
-      imagePaths = req.files.map(file => `/uploads/${file.filename}`);
-    }
-   const product = await Product.create({
+    const imagePaths = (req.files || []).map(file => `/uploads/${file.filename}`);
+
+    console.log("[createProduct] Saving to DB...");
+    const product = await Product.create({
+      wholesaler: req.user?.id || req.user?._id || null,
       name: name.trim(),
       category,
       unit,
-      baseCost: Number(baseCost),
-      wholesalerPrice: Number(wholesalerPrice),
+      baseCost: baseCostNum,
+      wholesalerPrice: wholesalerPriceNum,
       stock: Number(stock) || 0,
       description: description?.trim() || "",
-      image: imagePaths.length > 0 ? imagePaths[0] : null,   // keep first as main image (or change model)
-      // If you want to store all: images: imagePaths,
+      image: imagePaths[0] || null,
+      images: imagePaths,
     });
 
-    const populated = await Product.findById(product._id)
-      .populate("category", "name")
-      .populate("unit", "name");
-
-    res.status(201).json(populated);
+    console.log("[createProduct] Saved! ID:", product._id.toString());
+    // Return directly without populate to avoid extra DB roundtrip
+    res.status(201).json(product);
   } catch (error) {
-    console.error("Create product error:", error);
+    console.error("[createProduct] Error:", error.message);
     res.status(500).json({ message: error.message || "Server error" });
   }
 };
@@ -88,18 +90,24 @@ export const updateProduct = async (req, res) => {
     }
 
     // Image handling
-    if (req.file) {
-      // Delete old image if exists (safe even if product is not yet loaded)
+    // Image handling - replacing all images with new ones if new files are uploaded
+    if (req.files && req.files.length > 0) {
       const product = await Product.findById(req.params.id);
-      if (product?.image) {
-        const oldPath = path.join(__dirname, "..", product.image);
-        try {
-          await fs.unlink(oldPath);
-        } catch (err) {
-          console.warn("Old image delete failed:", err.message);
+      if (product) {
+        // Delete all old images if they exist
+        const allOldImages = product.images?.length > 0 ? product.images : (product.image ? [product.image] : []);
+        for (const oldImg of allOldImages) {
+          const oldPath = path.join(__dirname, "..", oldImg);
+          try {
+            await fs.unlink(oldPath);
+          } catch (err) {
+            console.warn("Old image delete failed:", err.message);
+          }
         }
       }
-      updateData.image = `/uploads/${req.file.filename}`;
+      const newPaths = req.files.map(file => `/uploads/${file.filename}`);
+      updateData.image = newPaths[0];
+      updateData.images = newPaths;
     }
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updateData, {
@@ -135,6 +143,25 @@ export const getProducts = async (req, res) => {
     res.json(prepared);
   } catch (error) {
     console.error("Get products error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getMyProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ wholesaler: req.user.id })
+      .populate("category", "name")
+      .populate("unit", "name")
+      .sort({ createdAt: -1 });
+
+    const prepared = products.map((product) => ({
+      ...product.toObject(),
+      priceInfo: product.getPriceForUser(req.user),
+    }));
+
+    res.json(prepared);
+  } catch (error) {
+    console.error("Get my products error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };

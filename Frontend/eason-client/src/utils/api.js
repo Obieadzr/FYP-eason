@@ -2,7 +2,6 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: "http://localhost:5000/api",
-  timeout: 30000,
 });
 
 // Auto add Bearer token
@@ -14,11 +13,13 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// Auto logout + redirect on 401
+// Auto logout + redirect on 401, but NOT on product upload routes
 API.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const url = err.config?.url || "";
+    const isProductRoute = url.includes("/products");
+    if (err.response?.status === 401 && !isProductRoute) {
       localStorage.removeItem("eason_token");
       window.location.href = "/login?expired=true";
     }

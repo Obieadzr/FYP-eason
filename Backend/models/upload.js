@@ -23,13 +23,12 @@ const upload = multer({
   storage,
   limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|webp/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) {
+    // Check if the file's mimetype starts with 'image/'
+    if (file.mimetype.startsWith("image/")) {
       return cb(null, true);
     }
-    cb(new Error("Only images (jpeg, jpg, png, webp) are allowed"));
+    // Fallback error if someone tries to upload a non-image file
+    cb(new Error("Only image files (e.g. jpeg, png, webp, avif) are allowed"));
   },
 });
 

@@ -8,7 +8,7 @@ const orderItemSchema = new mongoose.Schema({
     required: true,
   },
   quantity: { type: Number, required: true, min: 1 },
-  pricePerUnit: { type: Number, required: true, min: 0 }, // snapshot of price at purchase
+  pricePerUnit: { type: Number, required: true, min: 0 },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -19,7 +19,9 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     items: [orderItemSchema],
-    totalAmount: { type: Number, required: true, min: 0 },
+    totalAmount: { type: Number, required: true, min: 0 },       // pre-tax subtotal
+    taxAmount: { type: Number, default: 0 },                     // 13% VAT
+    grandTotal: { type: Number, required: true, min: 0 },        // totalAmount + taxAmount
     platformFee: { type: Number, default: 0 },
     wholesalerPayout: { type: Number, default: 0 },
     shippingAddress: { type: String, required: true },

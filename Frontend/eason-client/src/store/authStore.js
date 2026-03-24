@@ -34,17 +34,22 @@ export const useAuthStore = create(
           set({ 
             user: res.data.user, 
             isAuthenticated: true, 
-            loading: false 
           });
         } catch (err) {
           localStorage.removeItem("eason_token");
-          set({ user: null, isAuthenticated: false, loading: false });
+          set({ user: null, isAuthenticated: false });
+        } finally {
+          set({ loading: false });
         }
       },
     }),
     {
       name: "eason-auth",
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({ 
+        user: state.user, 
+        isAuthenticated: state.isAuthenticated,
+        loading: false // instantly unblock UI if rehydrating from cache
+      }),
     }
   )
 );

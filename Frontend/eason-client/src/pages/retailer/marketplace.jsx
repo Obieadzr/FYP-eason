@@ -16,7 +16,7 @@ import {
   Eye,
   Minus,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../../utils/api";
 import ason2 from "../../assets/ason2.jpg";
 import { useCart } from "../../context/CartContext.jsx";
@@ -33,7 +33,8 @@ export default function Marketplace() {
 
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchQuery = searchParams.get("q") || "";
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -261,7 +262,11 @@ export default function Marketplace() {
                         ref={searchRef}
                         type="text"
                         value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val) setSearchParams({ q: val });
+                          else setSearchParams({});
+                        }}
                         onFocus={() => setShowSuggestions(true)}
                         onKeyDown={e => {
                           if (e.key === "Enter") {
@@ -437,16 +442,16 @@ export default function Marketplace() {
         </section>
 
         {/* ─────────────────────── STICKY CATEGORY STRIP ───────────────────── */}
-        <section className="bg-white/95 backdrop-blur-sm border-b border-gray-200 shadow-sm" style={{ position: "sticky", top: "64px", zIndex: 40 }}>
-          <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center gap-3 overflow-x-auto scrollbar-hide">
+        <section className="sticky top-[72px] z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+          <div className="max-w-screen-2xl mx-auto py-3 px-6 overflow-x-auto scrollbar-hide flex items-center gap-3">
             {categories.map(cat => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-5 py-2 text-sm font-semibold whitespace-nowrap transition-all ${
+                className={`px-5 py-2 text-sm font-semibold whitespace-nowrap transition-colors rounded-full ${
                   selectedCategory === cat
-                    ? "bg-black text-white"
-                    : "border border-gray-200 text-gray-600 hover:border-black hover:text-black bg-white"
+                    ? "bg-black text-white shadow-sm"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                 }`}
               >
                 {cat}
@@ -456,7 +461,7 @@ export default function Marketplace() {
         </section>
 
         {/* ─────────────────────── MAIN CONTENT ───────────────────────────────── */}
-        <main className="max-w-screen-2xl mx-auto px-6 py-10" id="products-grid">
+        <main className="max-w-screen-2xl mx-auto px-6 pt-6 pb-10" id="products-grid">
 
           {/* Sort / Filter bar */}
           <div className="flex items-center justify-between mb-8">
@@ -475,7 +480,11 @@ export default function Marketplace() {
                   type="text"
                   placeholder="Search..."
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val) setSearchParams({ q: val });
+                    else setSearchParams({});
+                  }}
                   className="pl-9 pr-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30 w-40"
                 />
               </div>
@@ -575,6 +584,7 @@ export default function Marketplace() {
                 const isOutOfStock = availableStock === 0;
                 const isUrgent = availableStock >= 1 && availableStock <= 5;
                 const isLowStock = availableStock >= 6 && availableStock <= 15;
+                const isHot = product.stock > 0 && product.stock <= 10;
 
                 return (
                   <motion.div
@@ -613,11 +623,21 @@ export default function Marketplace() {
                       )}
 
                       {/* Badges top-left */}
-                      <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+                      <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
                         {isNew(product.createdAt) && (
                           <span className="bg-black text-white text-[10px] font-bold px-2.5 py-1">NEW</span>
                         )}
+                        {isHot && (
+                          <span className="bg-rose-500 text-white text-[10px] font-bold px-2.5 py-1">HOT</span>
+                        )}
                       </div>
+
+                      {/* Stock count badge */}
+                      {product.stock > 0 && product.stock <= 5 && (
+                        <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-red-600 text-[10px] font-bold px-2.5 py-1 border border-red-100 z-10">
+                          {product.stock} LEFT
+                        </div>
+                      )}
 
                       {/* Wishlist */}
                       <button

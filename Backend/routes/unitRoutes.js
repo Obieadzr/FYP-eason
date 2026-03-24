@@ -1,4 +1,5 @@
 import express from "express";
+import { authMiddleware } from "../middleware/auth.js";
 import {
   createUnit,
   getUnits,
@@ -8,9 +9,12 @@ import {
 
 const router = express.Router();
 
-router.post("/", createUnit);
+// Public reads
 router.get("/", getUnits);
-router.put("/:id", updateUnit);
-router.delete("/:id", deleteUnit);
+
+// Write operations require authentication
+router.post("/", authMiddleware, createUnit);
+router.put("/:id", authMiddleware, updateUnit);
+router.delete("/:id", authMiddleware, deleteUnit);
 
 export default router;

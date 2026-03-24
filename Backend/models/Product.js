@@ -3,6 +3,11 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
+    wholesaler: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+    },
     name: {
       type: String,
       required: [true, "Product name is required"],
@@ -63,6 +68,10 @@ const productSchema = new mongoose.Schema(
     image: {
       type: String,
       default: null,
+    },
+    images: {
+      type: [String],
+      default: [],
     },
   },
   {

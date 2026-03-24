@@ -4,7 +4,7 @@ import API from "../../utils/api";
 import toast from "react-hot-toast";
 import {
   Package, ShoppingBag, ArrowLeft, Clock, CheckCircle,
-  Truck, XCircle, AlertCircle, ChevronDown, ChevronUp, MapPin
+  Truck, XCircle, AlertCircle, ChevronDown, ChevronUp, MapPin, Check
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -110,6 +110,39 @@ function OrderCard({ order }) {
                   ))}
                 </div>
               </div>
+
+              {/* Visual Status Tracker */}
+              {(() => {
+                const steps = ["Ordered", "Processing", "Shipped", "Delivered"];
+                const currentStep = { pending: 0, processing: 1, shipped: 2, delivered: 3 }[order.status] ?? 0;
+                const isCancelled = order.status === "cancelled";
+
+                return isCancelled ? (
+                  <div className="bg-red-50 text-red-600 border border-red-100 rounded-xl px-4 py-4 flex items-center justify-center font-semibold text-sm">
+                    <XCircle className="w-5 h-5 mr-2" /> Order cancelled
+                  </div>
+                ) : (
+                  <div className="relative py-6 px-4 mb-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                    <div className="absolute top-10 left-8 right-8 h-0.5 bg-gray-200 -z-10" />
+                    <div className="absolute top-10 left-8 h-0.5 bg-emerald-500 -z-10 transition-all duration-500" style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }} />
+                    <div className="flex justify-between relative z-10 w-full">
+                      {steps.map((step, i) => (
+                         <div key={step} className="flex flex-col items-center gap-2">
+                           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
+                              i < currentStep ? "bg-emerald-500 text-white" : i === currentStep ? "bg-white border-2 border-emerald-500 text-emerald-500 shadow-sm" : "bg-white border-2 border-gray-200 text-gray-300"
+                           }`}>
+                             {i < currentStep && <Check className="w-4 h-4" />}
+                             {i === currentStep && <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />}
+                           </div>
+                           <span className={`text-[11px] font-semibold text-center ${i <= currentStep ? "text-gray-900" : "text-gray-400"}`}>
+                             {step}
+                           </span>
+                         </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Shipping */}
               <div className="bg-gray-50 rounded-xl px-4 py-4 flex items-start gap-3">

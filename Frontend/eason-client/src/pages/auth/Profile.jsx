@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, TrendingUp, Settings,
   LogOut, CheckCircle2, Boxes, AlertTriangle, ShoppingBag,
-  Search, Plus, Edit3, Trash2
+  Search, Plus, Edit3, Trash2, Loader2
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import API from "../../utils/api";

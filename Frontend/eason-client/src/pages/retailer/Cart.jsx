@@ -233,7 +233,7 @@ export default function Cart() {
       const res = await API.post("/orders", payload);
       toast.success("Order placed! 🎉", { id: toastId });
       clearCart();
-      navigate("/order-success", { state: { orderId: res.data.order._id, total: res.data.order.totalAmount || cartTotal } });
+      navigate("/order-success", { state: { orderId: res.data.order._id, total: res.data.order.grandTotal || grandTotal } });
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to place order.", { id: toastId });
     } finally { setIsProcessing(false); }
@@ -257,7 +257,7 @@ export default function Cart() {
       toast.success("Payment successful! ✅", { id: toastId });
       clearCart();
       setShowPayModal(false);
-      navigate("/order-success", { state: { orderId: res.data.order._id, total: res.data.order.totalAmount || cartTotal } });
+      navigate("/order-success", { state: { orderId: res.data.order._id, total: res.data.order.grandTotal || grandTotal } });
     } catch (err) {
       toast.error(err.response?.data?.message || "Payment failed.", { id: toastId });
     } finally { setIsProcessing(false); }

@@ -3,21 +3,21 @@ import express from "express";
 import User from "../models/User.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// Middleware to check if user is admin (add this later if needed, but for MVP we trust route protection)
-const requireAdmin = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user?.id); // assuming you have auth middleware setting req.user
-    if (user.role !== "admin") {
-      return res.status(403).json({ message: "Access denied. Admin only." });
-    }
-    next();
-  } catch (err) {
-    res.status(401).json({ message: "Unauthorized" });
-  }
+// All admin routes are protected — require valid JWT and admin role
+const requireAdmin = (req, res, next) => {
+  // authMiddleware already ran, so req.user is populated
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  if (req.user.role !== "admin") return res.status(403).json({ message: "Access denied. Admin only." });
+  next();
 };
+
+// Apply authMiddleware to all routes in this router
+router.use(authMiddleware);
+router.use(requireAdmin);
 
 // Get all pending wholesalers
 router.get("/pending-wholesalers", async (req, res) => {
@@ -53,7 +53,7 @@ router.put("/approve-wholesaler/:id", async (req, res) => {
   }
 });
 
-// Reject (optional - just delete or keep pending)
+// Reject (delete the application)
 router.delete("/reject-wholesaler/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id);

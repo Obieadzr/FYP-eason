@@ -50,7 +50,9 @@ const orderLimiter = rateLimit({
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'],
+  origin: process.env.FRONTEND_URL 
+    ? [process.env.FRONTEND_URL] 
+    : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -82,6 +84,30 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
 
 app.get('/', (req, res) => res.send('eAson backend running!'));
+
+// ── Global Error Handler (Catches Multer + other errors) ─────────────────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  // Multer-specific errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ message: 'File is too large. Max size is 50MB per file.' });
+  }
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return res.status(400).json({ message: 'Too many files uploaded. Max 20 images allowed.' });
+  }
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({ message: `Unexpected field: ${err.field}. Use the field name "images".` });
+  }
+  if (err.message && err.message.includes('Only images')) {
+    return res.status(400).json({ message: err.message });
+  }
+
+  // Generic fallback
+  console.error('Unhandled error:', err);
+  return res.status(err.status || 500).json({
+    message: err.message || 'An unexpected server error occurred.',
+  });
+});
 
 // ── Database & Server ──────────────────────────────────────────────────────
 mongoose.connect(process.env.MONGO_URI)

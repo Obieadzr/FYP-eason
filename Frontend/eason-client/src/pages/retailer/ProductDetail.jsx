@@ -187,11 +187,13 @@ export default function ProductDetail() {
     );
   }
 
-  const thumbnails = [
-    `http://localhost:5000${product.image}`,
-    `http://localhost:5000${product.image}`,
-    `http://localhost:5000${product.image}`,
-  ];
+  const thumbnails = product?.images?.length > 0
+    ? product.images.map(img => `http://localhost:5000${img}`)
+    : [
+        `http://localhost:5000${product.image}`,
+        `http://localhost:5000${product.image}`,
+        `http://localhost:5000${product.image}`,
+      ];
 
   /* ─── Page ─────────────────────────────────────────────────────────────── */
   return (

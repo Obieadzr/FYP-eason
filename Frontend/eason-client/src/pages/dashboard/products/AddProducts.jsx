@@ -66,14 +66,12 @@ const AddProduct = () => {
     data.append("description", formData.description || "");
 
     if (imageFile) {
-      data.append("image", imageFile);
+      data.append("images", imageFile);
     }
 
     try {
       setLoading(true);
-      await API.post("/products", data, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await API.post("/products", data);
       toast.success("Product added successfully!");
       navigate("/dashboard/products");
     } catch (err) {
