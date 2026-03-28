@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename);
 export const createProduct = async (req, res) => {
   console.log("[createProduct] Request received. Files:", req.files?.length ?? 0, "Body keys:", Object.keys(req.body || {}));
   try {
-    const { name, category, unit, baseCost, wholesalerPrice, stock, description } = req.body;
+    const { name, category, unit, baseCost, wholesalerPrice, stock, description, attributes, bulkPricing } = req.body;
 
     if (!name || !category || !unit || !baseCost || !wholesalerPrice) {
       return res.status(400).json({
@@ -33,6 +33,25 @@ export const createProduct = async (req, res) => {
     const imagePaths = (req.files || []).map(file => `/uploads/${file.filename}`);
 
     console.log("[createProduct] Saving to DB...");
+    
+    let parsedAttributes = {};
+    if (attributes) {
+      try {
+        parsedAttributes = typeof attributes === 'string' ? JSON.parse(attributes) : attributes;
+      } catch (e) {
+        console.error("Failed to parse attributes JSON");
+      }
+    }
+
+    let parsedBulkPricing = [];
+    if (bulkPricing) {
+      try {
+        parsedBulkPricing = typeof bulkPricing === 'string' ? JSON.parse(bulkPricing) : bulkPricing;
+      } catch (e) {
+        console.error("Failed to parse bulkPricing JSON");
+      }
+    }
+
     const product = await Product.create({
       wholesaler: req.user?.id || req.user?._id || null,
       name: name.trim(),
@@ -42,6 +61,8 @@ export const createProduct = async (req, res) => {
       wholesalerPrice: wholesalerPriceNum,
       stock: Number(stock) || 0,
       description: description?.trim() || "",
+      attributes: parsedAttributes,
+      bulkPricing: parsedBulkPricing,
       image: imagePaths[0] || null,
       images: imagePaths,
     });
@@ -57,7 +78,7 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
-    const { name, category, unit, baseCost, wholesalerPrice, stock, description } = req.body;
+    const { name, category, unit, baseCost, wholesalerPrice, stock, description, attributes, bulkPricing } = req.body;
 
     const updateData = {};
 
@@ -66,6 +87,21 @@ export const updateProduct = async (req, res) => {
     if (unit) updateData.unit = unit;
     if (stock !== undefined) updateData.stock = Number(stock) || 0;
     if (description !== undefined) updateData.description = description.trim() || "";
+    if (attributes !== undefined) {
+      try {
+        updateData.attributes = typeof attributes === 'string' ? JSON.parse(attributes) : attributes;
+      } catch (e) {
+        console.error("Failed to parse attributes JSON in update");
+      }
+    }
+    
+    if (bulkPricing !== undefined) {
+      try {
+        updateData.bulkPricing = typeof bulkPricing === 'string' ? JSON.parse(bulkPricing) : bulkPricing;
+      } catch (e) {
+        console.error("Failed to parse bulkPricing JSON in update");
+      }
+    }
 
     // Handle price updates
     if (baseCost !== undefined || wholesalerPrice !== undefined) {

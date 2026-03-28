@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Heart, ShoppingCart, ArrowLeft, Package, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useAuthStore } from "../../store/authStore";
 import toast from "react-hot-toast";
 import API from "../../utils/api";
 
@@ -12,6 +13,7 @@ const FONT = { fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" };
 export default function Wishlist() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuthStore();
   const [products, setProducts] = useState([]);
   const [wishlist, setWishlist] = useState(() => {
     try { return JSON.parse(localStorage.getItem("eason_wishlist")) || []; }
@@ -20,17 +22,29 @@ export default function Wishlist() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!wishlist.length) { setLoading(false); return; }
-    Promise.all(wishlist.map(id => API.get(`/products/${id}`).then(r => r.data).catch(() => null)))
-      .then(results => setProducts(results.filter(Boolean)))
-      .finally(() => setLoading(false));
-  }, []);
+    if (isAuthenticated) {
+      API.get('/wishlist').then(r => {
+        setProducts(r.data);
+        setWishlist(r.data.map(p => p._id));
+      }).catch(() => null).finally(() => setLoading(false));
+    } else {
+      if (!wishlist.length) { setLoading(false); return; }
+      Promise.all(wishlist.map(id => API.get(`/products/${id}`).then(r => r.data).catch(() => null)))
+        .then(results => setProducts(results.filter(Boolean)))
+        .finally(() => setLoading(false));
+    }
+  }, [isAuthenticated]);
 
-  const removeFromWishlist = (id) => {
+  const removeFromWishlist = async (id) => {
     const next = wishlist.filter(x => x !== id);
     setWishlist(next);
     setProducts(p => p.filter(x => x._id !== id));
-    localStorage.setItem("eason_wishlist", JSON.stringify(next));
+    
+    if (isAuthenticated) {
+       try { await API.post('/wishlist/toggle', { productId: id }); } catch (e) {}
+    } else {
+       localStorage.setItem("eason_wishlist", JSON.stringify(next));
+    }
     toast("Removed from wishlist", { icon: "💔" });
   };
 

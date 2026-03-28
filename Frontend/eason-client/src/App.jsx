@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/authStore";
+import ChatDrawer from "./components/chat/ChatDrawer.jsx";
+import { useChat } from "./store/useChat.js";
 
 // Pages
 import LandingPage from "./pages/public/LandingPage.jsx";
@@ -13,10 +15,26 @@ import Wishlist from "./pages/retailer/Wishlist.jsx";
 import Orders from "./pages/retailer/Orders.jsx";
 import PendingApproval from "./pages/auth/PendingApproval.jsx";
 import OrderSuccess from "./pages/orders/OrderSuccess.jsx";
+import PaymentSuccess from "./pages/retailer/PaymentSuccess.jsx";
 import OrderKanban from "./pages/orders/OrderKanban.jsx";
 import Profile from "./pages/auth/Profile.jsx";
 import Settings from "./pages/auth/Settings.jsx";
 import WholesalerDashboard from "./pages/wholesaler/WholesalerDashboard.jsx";
+import Messages from "./pages/chat/Messages.jsx";
+
+// New Public Static Pages
+import HowItWorks from "./pages/public/HowItWorks.jsx";
+import SellOnEason from "./pages/public/SellOnEason.jsx";
+import Pricing from "./pages/public/Pricing.jsx";
+import AboutUs from "./pages/public/AboutUs.jsx";
+import Contact from "./pages/public/Contact.jsx";
+import HelpCenter from "./pages/public/HelpCenter.jsx";
+import Blog from "./pages/public/Blog.jsx";
+import Careers from "./pages/public/Careers.jsx";
+import Privacy from "./pages/public/Privacy.jsx";
+import Terms from "./pages/public/Terms.jsx";
+import Press from "./pages/public/Press.jsx";
+import Sitemap from "./pages/public/Sitemap.jsx";
 
 // Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
@@ -31,6 +49,7 @@ import Units from "./pages/dashboard/Units.jsx";
 import Products from "./pages/dashboard/Products.jsx";
 import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx"; // renamed to avoid confusion
 import VerificationQueue from "./pages/dashboard/VerificationQueue.jsx";
+import Users from "./pages/dashboard/Users.jsx";
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -51,17 +70,40 @@ const NotFound = () => {
 };
 
 function App() {
-  const { checkAuth } = useAuthStore();
+  const { checkAuth, isAuthenticated } = useAuthStore();
+  const { initSocket, disconnectSocket, fetchConversations } = useChat();
 
   useEffect(() => {
     checkAuth();
   }, [checkAuth]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      initSocket();
+      fetchConversations();
+    } else {
+      disconnectSocket();
+    }
+  }, [isAuthenticated, initSocket, disconnectSocket, fetchConversations]);
 
   return (
     <BrowserRouter>
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/sell" element={<SellOnEason />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/about" element={<AboutUs />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/help" element={<HelpCenter />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/press" element={<Press />} />
+        <Route path="/sitemap" element={<Sitemap />} />
+        
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/marketplace" element={<Marketplace />} />
@@ -71,9 +113,11 @@ function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />
+        <Route path="/payment/success" element={<PaymentSuccess />} />
 
         {/* Generic Protected Pages */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/orders/kanban" element={<ProtectedRoute allowedRoles={["wholesaler", "admin"]}><OrderKanban /></ProtectedRoute>} />
 
         <Route
@@ -157,6 +201,16 @@ function App() {
           }
         />
         <Route
+          path="/dashboard/users"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout>
+                <Users />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/settings"
           element={
             <ProtectedRoute>
@@ -179,6 +233,7 @@ function App() {
           element={<NotFound />}
         />
       </Routes>
+      <ChatDrawer />
     </BrowserRouter>
   );
 }

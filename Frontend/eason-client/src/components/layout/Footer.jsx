@@ -1,14 +1,35 @@
 // src/components/layout/Footer.jsx
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import toast from "react-hot-toast";
 import nepalFlag from "../../assets/nepal.png";
 
 const cols = [
-  { title: "Platform",  links: ["Marketplace",    "How it Works", "Pricing",   "API"]          },
-  { title: "Company",   links: ["About Us",       "Blog",         "Careers",   "Press"]         },
-  { title: "Support",   links: ["Help Center",    "Contact",      "WhatsApp",  "System Status"] },
-  { title: "Legal",     links: ["Privacy Policy", "Terms",        "Licenses",  "Compliance"]    },
+  { title: "Platform",  links: [
+    { name: "Marketplace",  to: "/marketplace" },
+    { name: "How It Works", to: "/how-it-works" },
+    { name: "Pricing",      to: "/pricing" },
+    { name: "API",          href: "https://docs.eason.com.np", external: true }
+  ]},
+  { title: "Company",   links: [
+    { name: "About Us",     to: "/about" },
+    { name: "Blog",         to: "/blog" },
+    { name: "Careers",      to: "/careers" },
+    { name: "Press",        to: "/press" }
+  ]},
+  { title: "Support",   links: [
+    { name: "Help Center",  to: "/help" },
+    { name: "Contact",      to: "/contact" },
+    { name: "WhatsApp",     href: "https://wa.me/9779800000000", external: true },
+    { name: "System Status",href: "https://status.eason.com.np", external: true }
+  ]},
+  { title: "Legal",     links: [
+    { name: "Privacy Policy",to: "/privacy" },
+    { name: "Terms",         to: "/terms" },
+    { name: "Licenses",      to: "/licenses" },
+    { name: "Compliance",    to: "/compliance" }
+  ]},
 ];
 
 const SocialFacebook = () => (
@@ -33,13 +54,24 @@ const SocialX = () => (
 );
 
 const socials = [
-  { label: "Facebook",  href: "#", Icon: SocialFacebook  },
-  { label: "Instagram", href: "#", Icon: SocialInstagram },
-  { label: "LinkedIn",  href: "#", Icon: SocialLinkedIn  },
-  { label: "X",         href: "#", Icon: SocialX         },
+  { label: "Facebook",  href: "https://facebook.com/easonnepal", Icon: SocialFacebook  },
+  { label: "Instagram", href: "https://instagram.com/easonnepal", Icon: SocialInstagram },
+  { label: "LinkedIn",  href: "https://linkedin.com/company/easonnepal", Icon: SocialLinkedIn  },
+  { label: "X",         href: "https://x.com/easonnepal", Icon: SocialX         },
 ];
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+
+  const handleNewsletter = () => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    toast.success("You're on the list! We'll be in touch.");
+    setEmail("");
+  };
+
   return (
     <footer className="bg-[#0a0a0a] text-white overflow-hidden">
       {/* Big brand statement */}
@@ -63,6 +95,8 @@ export default function Footer() {
                 <motion.a
                   key={s.label}
                   href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   whileHover={{ scale: 1.1, backgroundColor: "#10b981" }}
                   className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:text-white transition-colors"
                 >
@@ -79,10 +113,13 @@ export default function Footer() {
             <div className="flex gap-2">
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 className="flex-1 bg-white/6 border border-white/12 text-white placeholder-white/25 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500/50"
               />
               <motion.button
+                onClick={handleNewsletter}
                 whileTap={{ scale: 0.97 }}
                 className="px-5 py-3 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 transition shrink-0"
               >
@@ -102,13 +139,24 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {col.links.map((link) => (
-                <li key={link}>
-                  <a
-                    href="#"
-                    className="text-sm text-white/50 hover:text-white transition-colors"
-                  >
-                    {link}
-                  </a>
+                <li key={link.name}>
+                  {link.external ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-white/50 hover:text-white transition-colors"
+                    >
+                      {link.name}
+                    </a>
+                  ) : (
+                    <Link
+                      to={link.to}
+                      className="text-sm text-white/50 hover:text-white transition-colors"
+                    >
+                      {link.name}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -123,10 +171,10 @@ export default function Footer() {
           <p className="text-xs text-white/25">© 2025 eAson Technologies · Made with ♥ in Kathmandu</p>
         </div>
         <div className="flex gap-6">
-          {["Privacy Policy", "Terms of Service", "Sitemap"].map((l) => (
-            <a key={l} href="#" className="text-xs text-white/25 hover:text-white/60 transition">
-              {l}
-            </a>
+          {[{name:"Privacy Policy", to:"/privacy"}, {name:"Terms of Service", to:"/terms"}, {name:"Sitemap", to:"/sitemap"}].map((l) => (
+            <Link key={l.name} to={l.to} className="text-xs text-white/25 hover:text-white/60 transition">
+              {l.name}
+            </Link>
           ))}
         </div>
       </div>

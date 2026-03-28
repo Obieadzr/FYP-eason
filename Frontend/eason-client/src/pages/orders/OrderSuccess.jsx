@@ -124,7 +124,7 @@ export default function OrderSuccess() {
             Continue Shopping <ArrowRight className="w-4 h-4" />
           </button>
           <button
-            onClick={() => navigate("/profile")}
+            onClick={() => window.location.href = "/profile"}
             className="px-8 py-4 border border-gray-200 text-black text-xs font-bold uppercase tracking-widest hover:border-black transition"
           >
             View My Orders

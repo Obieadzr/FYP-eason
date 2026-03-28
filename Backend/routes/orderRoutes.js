@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { createOrder, updateOrderStatus } from "../controllers/orderController.js";
 import { sendOrderStatusUpdate } from "../utils/email.js";
+import Wallet from "../models/Wallet.js";
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ router.get("/my-orders", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id })
       .sort({ createdAt: -1 })
-      .populate("items.product", "name image wholesalerPrice");
+      .populate("items.product", "name image wholesalerPrice wholesaler");
 
     res.json({
       success: true,
@@ -97,14 +98,19 @@ router.get("/", authMiddleware, async (req, res) => {
 
 // PUT /api/orders/:id/status - Update order status
 router.put("/:id/status", authMiddleware, async (req, res) => {
-  if (!["admin", "wholesaler"].includes(req.user.role)) {
-    return res.status(403).json({
-      success: false,
-      message: "Not authorized. Admin or Wholesaler only.",
-    });
-  }
-
   const { status } = req.body;
+
+  if (!["admin", "wholesaler"].includes(req.user.role)) {
+    // Retailers can only mark as delivered
+    if (req.user.role === "retailer" && status === "delivered") {
+      // Allowed
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized. Retailers can only verify delivery.",
+      });
+    }
+  }
 
   if (!["pending", "processing", "shipped", "delivered", "cancelled"].includes(status)) {
     return res.status(400).json({
@@ -118,7 +124,7 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
       req.params.id,
       { status },
       { new: true, runValidators: true }
-    ).populate("user", "firstName lastName email");
+    ).populate("user", "firstName lastName email").populate({ path: "items.product", select: "wholesaler" });
 
     if (!order) {
       return res.status(404).json({
@@ -137,6 +143,39 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
       }
     } catch (emailErr) {
       console.error("Status email failed (non-critical):", emailErr.message);
+    }
+
+    // Escrow System: Payout to Wholesaler when Delivered
+    if (status === "delivered" && order.paymentStatus !== "paid") {
+      try {
+        // Find wholesaler from the first item
+        const firstItem = order.items && order.items[0];
+        if (firstItem && firstItem.product && firstItem.product.wholesaler) {
+          const wholesalerId = firstItem.product.wholesaler;
+          
+          let wallet = await Wallet.findOne({ user: wholesalerId });
+          if (!wallet) {
+            wallet = new Wallet({ user: wholesalerId, balance: 0, totalEarned: 0, transactions: [] });
+          }
+          
+          wallet.balance += order.wholesalerPayout;
+          wallet.totalEarned += order.wholesalerPayout;
+          wallet.transactions.push({
+            orderId: order._id,
+            amount: order.wholesalerPayout,
+            type: "credit",
+            status: "completed",
+            description: `Escrow payout for order #${order._id.toString().slice(-8).toUpperCase()}`
+          });
+          
+          await wallet.save();
+          order.paymentStatus = "paid"; // Mark as paid out
+          await order.save();
+          console.log(`Escrow payout of Rs ${order.wholesalerPayout} sent to Wholesaler ${wholesalerId}`);
+        }
+      } catch (escrowErr) {
+        console.error("Escrow payout failed critically:", escrowErr);
+      }
     }
 
     res.json({

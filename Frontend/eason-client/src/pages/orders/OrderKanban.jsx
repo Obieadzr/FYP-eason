@@ -98,10 +98,15 @@ export default function OrderKanban() {
   }, {});
 
   return (
-    <div className="min-h-screen bg-white p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-gray-900">Order Fulfillment</h1>
-        <p className="text-gray-500">Drag and drop orders across columns to update their status and notify customers.</p>
+    <div className="min-h-screen bg-white">
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 py-4 flex items-center mb-8 shadow-sm">
+        <button onClick={() => window.history.back()} className="mr-6 p-2 rounded-full hover:bg-gray-100 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-900" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div>
+          <h1 className="text-xl font-black text-gray-900 leading-none tracking-tighter uppercase">Order Kanban</h1>
+          <p className="text-xs text-gray-500 font-medium">Drag & drop to update fulfillment status.</p>
+        </div>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>

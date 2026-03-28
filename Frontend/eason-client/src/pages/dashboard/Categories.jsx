@@ -1,9 +1,8 @@
-// src/pages/dashboard/Categories.jsx
 import React, { useState, useEffect } from "react";
 import API from "../../utils/api.js";
-import { Plus, Search, Edit2, Trash2, Tag } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Tag, Loader2 } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Categories = () => {
   const [categories, setCategories] = useState([]);
@@ -65,7 +64,7 @@ const Categories = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
+    if (!window.confirm("Are you sure you want to permanently delete this category?")) return;
     try {
       await API.delete(`/categories/${id}`);
       toast.success("Category deleted");
@@ -77,188 +76,173 @@ const Categories = () => {
 
   return (
     <>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={{ style: { background: '#111', color: '#fff', border: '1px solid #222' } }} />
 
-      <div className="h-full flex flex-col">
-
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-10">
-          <div className="flex items-center justify-between">
+      <div className="h-full flex flex-col bg-[#0d0d0d] text-white" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        
+        {/* Header Section */}
+        <div className="bg-[#0d0d0d] border-b border-[#222] px-8 py-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div>
-              <h1 className="text-4xl font-black tracking-tight text-gray-900">Categories</h1>
-              <p className="text-gray-500 mt-2 font-medium">{categories.length} total categories</p>
+              <h1 className="text-4xl font-bold tracking-tight text-white mb-2" style={{ fontFamily: "'Syne', sans-serif" }}>Product Categories</h1>
+              <p className="text-gray-500 font-medium tracking-wide text-sm">{categories.length} organized namespaces</p>
             </div>
             <button
               onClick={() => openModal()}
-              className="flex items-center gap-3 px-6 py-3.5 bg-black text-white rounded-xl font-semibold hover:bg-gray-800 transition"
+              className="flex items-center gap-3 px-6 py-3.5 bg-[#00e87a] text-black rounded-full font-bold hover:bg-[#00fc85] transition-colors shadow-lg shadow-[#00e87a]/10"
             >
               <Plus className="w-5 h-5" />
-              New Category
+              Add Category
             </button>
           </div>
 
           {/* Search */}
           <div className="mt-8 max-w-xl">
             <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
               <input
                 type="text"
                 placeholder="Search categories..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-gray-100 rounded-2xl focus:outline-none focus:ring-4 focus:ring-black/10 transition text-gray-900 font-medium placeholder:text-gray-400"
+                className="w-full pl-14 pr-6 py-4 bg-[#111111] border border-[#222] rounded-2xl focus:outline-none focus:border-[#00e87a] focus:ring-1 focus:ring-[#00e87a] transition-colors text-white font-medium placeholder:text-gray-600 shadow-inner"
               />
             </div>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 px-8 py-10 bg-gray-50">
+        {/* Content Section */}
+        <div className="flex-1 px-8 py-10 bg-[#0d0d0d]">
           {loading ? (
-            <TableSkeleton />
+            <div className="flex items-center justify-center py-32">
+              <Loader2 className="w-10 h-10 text-[#00e87a] animate-spin" />
+            </div>
           ) : filtered.length === 0 ? (
-            <EmptyState onCreate={() => openModal()} />
+            <div className="bg-[#111111] border border-[#222] rounded-3xl p-16 text-center max-w-2xl mx-auto mt-10">
+              <div className="w-20 h-20 bg-[#0d0d0d] rounded-full flex items-center justify-center mx-auto mb-6 border border-[#222]">
+                <Tag className="w-8 h-8 text-gray-500" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-3" style={{ fontFamily: "'Syne', sans-serif" }}>No Categories Found</h3>
+              <p className="text-gray-500 mb-8">Get started by creating a taxonomy for your marketplace.</p>
+              <button onClick={() => openModal()} className="px-8 py-3 bg-white text-black font-bold outline-none rounded-full hover:bg-gray-200 transition-colors">
+                Create First Category
+              </button>
+            </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50/50">
-                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Category</th>
-                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Slug</th>
-                    <th className="text-left px-8 py-5 font-semibold text-gray-900">Products</th>
-                    <th className="text-right px-8 py-5 font-semibold text-gray-900">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((cat, i) => (
-                    <motion.tr
-                      key={cat._id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="border-b border-gray-100 hover:bg-gray-50/50 transition"
-                    >
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center text-white">
-                            <Tag className="w-6 h-6" />
+            <div className="bg-[#111111] rounded-2xl border border-[#222] overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-[#0d0d0d] border-b border-[#222]">
+                      <th className="py-5 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest">Category Name</th>
+                      <th className="py-5 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest">Slug Reference</th>
+                      <th className="py-5 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest">Active Listings</th>
+                      <th className="py-5 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest text-right">Settings</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#222]">
+                    {filtered.map((cat, i) => (
+                      <motion.tr
+                        key={cat._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="hover:bg-[#1a1a1a] transition-colors group"
+                      >
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 bg-[#0d0d0d] border border-[#222] rounded-xl flex items-center justify-center group-hover:border-[#00e87a]/30 transition-colors">
+                              <Tag className="w-4 h-4 text-[#00e87a]" />
+                            </div>
+                            <span className="font-bold text-white tracking-wide text-base capitalize">{cat.name}</span>
                           </div>
-                          <span className="font-bold text-gray-900 text-lg capitalize">{cat.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-6">
-                        <code className="text-sm font-mono bg-gray-100 px-3 py-1.5 rounded-lg text-gray-700">
-                          {cat.slug || "—"}
-                        </code>
-                      </td>
-                      <td className="px-8 py-6">
-                        <span className="font-medium text-gray-700">
-                          {cat.productCount || 0} product{cat.productCount !== 1 ? "s" : ""}
-                        </span>
-                      </td>
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => openModal(cat)}
-                            className="p-3 hover:bg-gray-100 rounded-xl transition"
-                          >
-                            <Edit2 className="w-5 h-5 text-gray-600" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(cat._id)}
-                            className="p-3 hover:bg-red-50 rounded-xl transition"
-                          >
-                            <Trash2 className="w-5 h-5 text-red-600" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
+                        </td>
+                        <td className="px-8 py-6">
+                          <code className="text-xs font-mono bg-[#0d0d0d] border border-[#222] px-3 py-1.5 rounded-lg text-gray-400">
+                            /{cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-')}
+                          </code>
+                        </td>
+                        <td className="px-8 py-6">
+                          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold tracking-widest uppercase bg-[#0d0d0d] text-gray-400 border border-[#222]">
+                            {cat.productCount || 0} Products
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button onClick={() => openModal(cat)} className="p-2.5 hover:bg-[#222] rounded-lg transition-colors text-gray-400 hover:text-white">
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => handleDelete(cat._id)} className="p-2.5 hover:bg-red-500/10 hover:text-red-500 rounded-lg transition-colors text-gray-400">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8"
-          >
-            <h2 className="text-2xl font-black text-gray-900 mb-8">
-              {editingCategory ? "Edit Category" : "Create New Category"}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-3">Category Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ name: e.target.value })}
-                  placeholder="e.g. Electronics, Clothing"
-                  className="w-full px-6 py-4 bg-gray-50 border border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-black/10 text-lg font-medium"
-                  autoFocus
-                />
+      {/* ── Modal ── */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[#111111] border border-[#222] rounded-3xl shadow-2xl max-w-md w-full overflow-hidden"
+              style={{ fontFamily: "'DM Sans', sans-serif" }}
+            >
+              <div className="p-8 pb-0">
+                <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  {editingCategory ? "Edit Category" : "New Category"}
+                </h2>
+                <p className="text-gray-500 text-sm">Define a new structural block for the marketplace.</p>
               </div>
-              <div className="flex gap-4 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-4 border border-gray-300 font-semibold rounded-xl hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !formData.name.trim()}
-                  className="flex-1 py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-                >
-                  {saving ? (
-                    <>Saving...</>
-                  ) : (
-                    <>{editingCategory ? "Update" : "Create"} Category</>
-                  )}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+              
+              <form onSubmit={handleSubmit} className="p-8 pt-6">
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Category Name Space</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ name: e.target.value })}
+                      placeholder="e.g. Microprocessors"
+                      className="w-full px-5 py-4 bg-[#0d0d0d] border border-[#222] rounded-xl focus:outline-none focus:border-[#00e87a] focus:ring-1 focus:ring-[#00e87a] text-white font-medium placeholder:text-gray-600 transition-colors"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-4 pt-10">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="flex-1 py-4 bg-transparent border border-[#333] text-white font-bold rounded-xl hover:bg-[#1a1a1a] transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || !formData.name.trim()}
+                    className="flex-1 py-4 bg-[#00e87a] text-black font-bold rounded-xl hover:bg-[#00fc85] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : editingCategory ? "Save Changes" : "Commit Category"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };
-
-const TableSkeleton = () => (
-  <div className="bg-white rounded-2xl border border-gray-200">
-    {[...Array(5)].map((_, i) => (
-      <div key={i} className="px-8 py-6 border-b border-gray-100 animate-pulse">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
-          <div className="h-6 bg-gray-200 rounded-lg w-48"></div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-const EmptyState = ({ onCreate }) => (
-  <div className="text-center py-32">
-    <div className="w-28 h-28 mx-auto bg-gray-100 rounded-3xl flex items-center justify-center mb-8">
-      <Tag className="w-14 h-14 text-gray-400" />
-    </div>
-    <h3 className="text-3xl font-black text-gray-900">No categories yet</h3>
-    <p className="text-gray-500 mt-4 text-lg">Create your first category to organize products</p>
-    <button
-      onClick={onCreate}
-      className="mt-8 px-8 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition"
-    >
-      + New Category
-    </button>
-  </div>
-);
 
 export default Categories;

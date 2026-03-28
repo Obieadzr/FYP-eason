@@ -1,12 +1,14 @@
 // src/pages/retailer/ProductDetail.jsx
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import ChatButton from "../../components/chat/ChatButton.jsx";
 import {
   ArrowLeft, Plus, Minus, Package, Heart, ShoppingBag,
   ChevronDown, MapPin, RefreshCw, Truck, Shield,
   Store, Star, Search, User
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import toast from "react-hot-toast";
 import API from "../../utils/api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuthStore } from "../../store/authStore.js";
@@ -117,10 +119,36 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   const [inWishlist, setInWishlist] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState({});
+
+  const availableVariants = useMemo(() => {
+    if (!product?.attributes) return [];
+    
+    // Determine which array-based attributes represent selectable options.
+    const variantKeys = ['color', 'sizes', 'shade', 'dyeShade', 'flavor', 'flavorOrVariant', 'size'];
+    return Object.entries(product.attributes)
+      .filter(([key, value]) => variantKeys.includes(key) && Array.isArray(value) && value.length > 0)
+      .map(([key, value]) => ({
+        key,
+        label: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+        options: value
+      }));
+  }, [product]);
+
+  const isAllVariantsSelected = availableVariants.every(v => selectedVariants[v.key]);
 
   useEffect(() => {
     if (product) setQuantity(product.moq || 1);
   }, [product]);
+
+  useEffect(() => {
+    if (user && user.wishlist && product) {
+      setInWishlist(user.wishlist.includes(product._id));
+    } else if (!user && product) {
+      const local = JSON.parse(localStorage.getItem("eason_wishlist")) || [];
+      setInWishlist(local.includes(product._id));
+    }
+  }, [user, product]);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -138,12 +166,23 @@ export default function ProductDetail() {
   }, [id]);
 
   const getDisplayPrice = () => {
+    let basePrice = product.wholesalerPrice || product.price || 0;
     const info = product.priceInfo || {};
-    const legacy = product.price || product.wholesalerPrice || 0;
-    if (!user) return info.finalPrice || legacy;
-    if (user.role === "retailer") return info.purchasePrice || legacy;
-    if (user.role === "wholesaler") return info.sellingPrice || legacy;
-    return info.finalPrice || legacy;
+    
+    if (!user) basePrice = info.finalPrice || basePrice;
+    else if (user.role === "retailer") basePrice = info.purchasePrice || basePrice;
+    else if (user.role === "wholesaler") basePrice = info.sellingPrice || basePrice;
+    else basePrice = info.finalPrice || basePrice;
+
+    if (user?.role === "retailer" && product.bulkPricing && product.bulkPricing.length > 0) {
+      const sortedTiers = [...product.bulkPricing].sort((a, b) => b.minQuantity - a.minQuantity);
+      for (const tier of sortedTiers) {
+        if (quantity >= tier.minQuantity) {
+          return tier.pricePerUnit;
+        }
+      }
+    }
+    return basePrice;
   };
 
   const getSuggestedPrice = () =>
@@ -151,14 +190,42 @@ export default function ProductDetail() {
     Math.round((product.wholesalerPrice || product.price || 0) * 1.38);
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    if (!isAllVariantsSelected) {
+      toast.error("Please select all options before adding to bag");
+      return;
+    }
+    addToCart(product, quantity, selectedVariants);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 1800);
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity);
+    if (!isAllVariantsSelected) {
+      toast.error("Please select all options before buying");
+      return;
+    }
+    addToCart(product, quantity, selectedVariants);
     navigate("/cart");
+  };
+
+  const handleWishlistToggle = async () => {
+    const newVal = !inWishlist;
+    setInWishlist(newVal);
+    
+    if (user) {
+      try {
+        await API.post('/wishlist/toggle', { productId: product._id });
+        toast.success(newVal ? "Saved to your list" : "Removed from list");
+      } catch (err) {
+        setInWishlist(!newVal);
+      }
+    } else {
+      let local = JSON.parse(localStorage.getItem("eason_wishlist")) || [];
+      if (newVal) local.push(product._id);
+      else local = local.filter(id => id !== product._id);
+      localStorage.setItem("eason_wishlist", JSON.stringify(local));
+      toast.success(newVal ? "Saved to your list" : "Removed from list");
+    }
   };
 
   const isOutOfStock = product?.stock === 0;
@@ -330,7 +397,57 @@ export default function ProductDetail() {
 
             {/* Quantity + CTA — only non-wholesaler */}
             {user?.role !== "wholesaler" && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* Variant Selectors */}
+                {availableVariants.map((variant) => (
+                  <div key={variant.key} className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-900">{variant.label}</span>
+                      <span className="text-xs font-semibold text-emerald-600">
+                        {selectedVariants[variant.key] ? 
+                          (typeof selectedVariants[variant.key] === 'object' ? selectedVariants[variant.key].name : selectedVariants[variant.key]) 
+                          : "Select an option"}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                       {variant.options.map((opt, i) => {
+                         const isColor = typeof opt === 'object' && opt.hex;
+                         const isSelected = selectedVariants[variant.key] === opt || 
+                                          (isColor && selectedVariants[variant.key]?.hex === opt.hex);
+                         
+                         if (isColor) {
+                           return (
+                             <button
+                               key={opt.hex}
+                               onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
+                               title={opt.name}
+                               className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${
+                                 isSelected ? "border-black scale-110 shadow-md p-1" : "border-transparent hover:scale-105"
+                               }`}
+                             >
+                               <span className="w-full h-full rounded-full border border-gray-200" style={{ backgroundColor: opt.hex }} />
+                             </button>
+                           );
+                         }
+
+                         return (
+                           <button
+                             key={opt}
+                             onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
+                             className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                               isSelected
+                                 ? "bg-black text-white shadow-md border-black"
+                                 : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-transparent"
+                             } border`}
+                           >
+                             {opt}
+                           </button>
+                         );
+                       })}
+                    </div>
+                  </div>
+                ))}
+
                 {/* Qty selector */}
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-500 w-20">Quantity</span>
@@ -371,11 +488,11 @@ export default function ProductDetail() {
 
                 {/* Favourite */}
                 <button
-                  onClick={() => setInWishlist(!inWishlist)}
+                  onClick={handleWishlistToggle}
                   className="w-full py-4 rounded-full text-sm font-semibold border border-gray-200 text-gray-700 hover:border-gray-400 transition flex items-center justify-center gap-2"
                 >
-                  <Heart className={`w-4 h-4 ${inWishlist ? "fill-red-500 text-red-500" : ""}`} />
-                  {inWishlist ? "Saved" : "Favourite"}
+                  <Heart className={`w-4 h-4 transition-colors ${inWishlist ? "fill-red-500 text-red-500" : ""}`} />
+                  {inWishlist ? "Saved to Wishlist" : "Favourite"}
                 </button>
 
                 {/* Buy now */}
@@ -389,12 +506,12 @@ export default function ProductDetail() {
                 )}
 
                 {/* Negotiate */}
-                <button
-                  onClick={() => alert("Live chat / negotiation coming soon!")}
-                  className="w-full py-3.5 rounded-full text-xs font-medium border border-dashed border-gray-300 text-gray-500 hover:border-gray-500 hover:text-gray-700 transition"
-                >
-                  Request a Quote · Negotiate Price
-                </button>
+                <ChatButton 
+                  wholesalerId={product.seller?._id} 
+                  productId={product._id} 
+                  label="Negotiate Price"
+                  className="w-full justify-center py-4 rounded-full text-sm bg-transparent border-dashed border-2 border-gray-300 text-gray-900 font-bold hover:border-gray-900 hover:bg-white" 
+                />
               </div>
             )}
 
@@ -438,8 +555,56 @@ export default function ProductDetail() {
           </div>
         </div>
 
+        {/* ── Product Specifications ── */}
+        {product.attributes && Object.keys(product.attributes).length > 0 && (
+          <section className="mt-14 pt-10 border-t border-gray-100">
+            <h2 className="text-xl font-semibold text-gray-900 mb-6">Specifications</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
+              {Object.entries(product.attributes).map(([key, value]) => {
+                if (value === "" || value === null || (Array.isArray(value) && value.length === 0)) return null;
+                
+                // Format label: camelCase to Title Case
+                const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                
+                let displayValue = value;
+                if (typeof value === 'boolean') {
+                  displayValue = <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wider">{value ? "Yes" : "No"}</span>;
+                } else if (Array.isArray(value)) {
+                  if (value.length > 0 && value[0].hex) {
+                    displayValue = (
+                      <div className="flex flex-wrap gap-2">
+                        {value.map(c => (
+                          <span key={c.hex} title={c.name} className="flex items-center gap-1.5 text-xs bg-gray-50 border border-gray-200 px-2 py-1 rounded-md">
+                            <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: c.hex }}/>
+                            {c.name}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  } else {
+                     displayValue = (
+                       <div className="flex flex-wrap gap-1.5">
+                         {value.map(v => <span key={v} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-md font-medium">{v}</span>)}
+                       </div>
+                     );
+                  }
+                } else {
+                   displayValue = String(value);
+                }
+
+                return (
+                  <div key={key} className="flex items-start py-3.5 border-b border-gray-50">
+                    <span className="w-1/3 text-sm text-gray-500 font-medium">{label}</span>
+                    <span className="w-2/3 text-sm text-gray-900 font-semibold">{displayValue}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ── Vendor Card ── */}
-        <section className="mt-20 border-t border-gray-100 pt-14">
+        <section className="mt-14 border-t border-gray-100 pt-10">
           <h2 className="text-xl font-semibold text-gray-900 mb-8">Sold by</h2>
           <div className="flex items-start gap-6 p-6 bg-[#f9f9f9] rounded-3xl border border-gray-100">
             <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center shrink-0">

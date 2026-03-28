@@ -4,10 +4,12 @@ import API from "../../utils/api";
 import toast from "react-hot-toast";
 import {
   Package, ShoppingBag, ArrowLeft, Clock, CheckCircle,
-  Truck, XCircle, AlertCircle, ChevronDown, ChevronUp, MapPin, Check
+  Truck, XCircle, AlertCircle, ChevronDown, ChevronUp, MapPin, Check, Download
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { generateInvoice } from "../../utils/generateInvoice";
+import { useCart } from "../../context/CartContext";
 
 const STATUS = {
   pending:    { label: "Pending",    icon: Clock,        color: "bg-amber-50 text-amber-600 border-amber-200"    },
@@ -17,10 +19,18 @@ const STATUS = {
   cancelled:  { label: "Cancelled",  icon: XCircle,      color: "bg-red-50 text-red-500 border-red-200"          },
 };
 
-function OrderCard({ order }) {
+function OrderCard({ order, onVerify, onReorder }) {
   const [expanded, setExpanded] = useState(false);
   const status = STATUS[order.status] || STATUS.pending;
   const StatusIcon = status.icon;
+
+  const getTimeElapsed = (dateString) => {
+    const diffMS = Date.now() - new Date(dateString).getTime();
+    const diffHrs = Math.floor(diffMS / (1000 * 60 * 60));
+    if (diffHrs < 1) return "Just now";
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return `${Math.floor(diffHrs / 24)}d ago`;
+  };
 
   return (
     <motion.div
@@ -60,8 +70,14 @@ function OrderCard({ order }) {
               <StatusIcon className="w-3 h-3" />
               {status.label}
             </span>
+            {order.status === "pending" && (
+              <span className="inline-flex items-center gap-1 mt-1 ml-2 text-[10px] font-semibold px-2 py-1 rounded-full bg-gray-100 text-gray-500">
+                <Clock className="w-2.5 h-2.5" />
+                Wait: {getTimeElapsed(order.createdAt)}
+              </span>
+            )}
           </div>
-          <div className="text-gray-400">
+          <div className="text-gray-400 pl-2">
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </div>
         </div>
@@ -144,6 +160,41 @@ function OrderCard({ order }) {
                 );
               })()}
 
+              {/* Verify & Receive Button for Shipped Orders */}
+              {order.status === "shipped" && onVerify && (
+                <div className="pt-2">
+                   <button
+                     onClick={() => onVerify(order._id)}
+                     className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold text-sm shadow-sm hover:bg-emerald-700 transition"
+                   >
+                     Verify & Receive Items
+                   </button>
+                   <p className="text-[10px] text-center text-gray-400 mt-2">
+                     By clicking this, you authorize the release of escrow funds to the wholesaler.
+                   </p>
+                </div>
+              )}
+
+              {/* Download Invoice for Delivered Orders */}
+              {order.status === "delivered" && (
+                <div className="pt-2 flex flex-col gap-2">
+                   <button
+                     onClick={() => generateInvoice(order, "retailer")}
+                     className="w-full py-4 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm hover:bg-blue-100 border border-blue-100 transition flex items-center justify-center gap-2"
+                   >
+                     <Download className="w-4 h-4" /> Download PDF Invoice
+                   </button>
+                   {onReorder && (
+                     <button
+                       onClick={() => onReorder(order)}
+                       className="w-full py-4 bg-black text-white text-sm font-semibold rounded-xl hover:bg-gray-900 transition flex items-center justify-center gap-2 mt-2"
+                     >
+                       <Package className="w-4 h-4" /> 1-Click Reorder Cart
+                     </button>
+                   )}
+                </div>
+              )}
+
               {/* Shipping */}
               <div className="bg-gray-50 rounded-xl px-4 py-4 flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
@@ -184,6 +235,7 @@ function OrderCard({ order }) {
 
 export default function Orders() {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -201,6 +253,32 @@ export default function Orders() {
     };
     fetchOrders();
   }, []);
+
+  const handleVerify = async (id) => {
+    try {
+      await API.put(`/orders/${id}/status`, { status: "delivered" });
+      setOrders(prev => prev.map(o => o._id === id ? { ...o, status: "delivered" } : o));
+      toast.success("Items received! Funds released from Escrow.");
+    } catch {
+      toast.error("Failed to verify delivery.");
+    }
+  };
+
+  const handleReorder = (order) => {
+    let successCount = 0;
+    order.items.forEach(item => {
+      if (item.product && typeof item.product === 'object') {
+        addToCart(item.product, item.quantity, {});
+        successCount++;
+      }
+    });
+    if (successCount > 0) {
+      toast.success(`Added ${successCount} products to your cart for reorder!`);
+      navigate("/cart");
+    } else {
+      toast.error("Products are no longer available for reorder.");
+    }
+  };
 
   const filtered = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
@@ -280,7 +358,7 @@ export default function Orders() {
         ) : (
           <div className="space-y-4">
             {filtered.map(order => (
-              <OrderCard key={order._id} order={order} />
+              <OrderCard key={order._id} order={order} onVerify={handleVerify} onReorder={handleReorder} />
             ))}
           </div>
         )}

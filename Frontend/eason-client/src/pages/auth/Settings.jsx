@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 import {
   User, Store, Shield, Lock, Smartphone, Mail, MapPin,
-  LogOut, ArrowLeft, ShoppingBag, Edit3, Check, Package,
+  LogOut, ArrowLeft, ShoppingBag, Edit3, Check, Package, ShieldCheck
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import API from "../../utils/api";
+import KYCVerification from "./KYCVerification";
 
 const inputCls = "w-full bg-white border border-gray-300 text-gray-900 placeholder-gray-400 text-sm px-4 py-3.5 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-colors rounded-none";
 const labelCls = "block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2";
@@ -72,6 +73,7 @@ export default function Settings() {
   const tabs = [
     { id: "profile",    label: "Profile",         icon: User    },
     ...(isWholesaler ? [{ id: "business", label: "Business",  icon: Store  }] : []),
+    ...(isWholesaler ? [{ id: "kyc", label: "Verification", icon: ShieldCheck }] : []),
     { id: "security",   label: "Security",         icon: Shield  },
   ];
 
@@ -240,6 +242,19 @@ export default function Settings() {
                       {loading ? "Saving..." : <><Check className="w-4 h-4" /> Update Business Info</>}
                     </button>
                   </motion.form>
+                )}
+
+                {/* KYC TAB */}
+                {tab === "kyc" && isWholesaler && (
+                  <motion.div
+                    key="kyc"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <KYCVerification />
+                  </motion.div>
                 )}
 
                 {/* SECURITY TAB */}

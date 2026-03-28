@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import Navbar from "../../components/layout/Navbar";
+import CategoryPicker from "../../components/products/CategoryPicker";
+import ProductAttributesForm from "../../components/products/ProductAttributesForm";
 
 const BrandInput = ({ label, type = "text", ...props }) => (
   <div className="space-y-2">
@@ -49,6 +51,7 @@ export default function AddProduct() {
   });
   const [categories, setCategories] = useState([]);
   const [units, setUnits] = useState([]);
+  const [attributeValues, setAttributeValues] = useState({});
   const [previews, setPreviews] = useState([]);
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);
@@ -76,6 +79,9 @@ export default function AddProduct() {
             unit: p.unit?._id || "",
             images: [],
           });
+          if (p.attributes) {
+            setAttributeValues(p.attributes);
+          }
           if (p.images && p.images.length > 0) {
             setPreviews(p.images.map(img => `http://localhost:5000${img}`));
           } else if (p.image) {
@@ -141,6 +147,12 @@ export default function AddProduct() {
     formData.append("stock", Number(form.stock || 1));
     formData.append("category", form.category);
     formData.append("unit", form.unit);
+    
+    // Append dynamically collected attributes as a stringified JSON object
+    if (Object.keys(attributeValues).length > 0) {
+      formData.append("attributes", JSON.stringify(attributeValues));
+    }
+
     form.images.forEach((image) => {
       if (image instanceof File) {
         formData.append("images", image);
@@ -180,28 +192,40 @@ export default function AddProduct() {
   const selectedCategory = categories.find(c => c._id === form.category);
   const selectedUnit = units.find(u => u._id === form.unit);
 
+  const handleUnitSuggest = (unitName) => {
+    // Find the unit ID by name
+    const matches = units.filter(u => u.name.toLowerCase() === unitName.toLowerCase());
+    if (matches.length > 0) {
+      setForm(prev => ({ ...prev, unit: matches[0]._id }));
+      toast.success(`Auto-selected ${unitName} based on category hint.`);
+    } else {
+      toast.error(`Unit "${unitName}" not found in database.`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-emerald-50/20 font-['Satoshi',sans-serif]">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto pt-32 pb-24 px-4 sm:px-6 flex flex-col lg:flex-row gap-8">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 sm:px-12 py-4 flex items-center justify-between shadow-sm">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-gray-900 font-semibold flex items-center gap-2 hover:text-emerald-600 transition"
+        >
+          <ArrowLeft className="w-5 h-5" /> Back
+        </button>
+        <div className="font-bold tracking-widest text-sm uppercase text-black">
+          {editId ? "Edit Product" : "Create Drop"}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto pt-16 pb-24 px-4 sm:px-6 flex flex-col lg:flex-row gap-8">
         
         {/* LEFT PANEL: FORM WIZARD */}
         <div className="w-full lg:w-3/5">
           <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-8 md:p-12 relative overflow-hidden">
             
-            {/* Header & Back */}
-            <div className="flex items-center justify-between mb-12">
-              <button
-                onClick={() => navigate(-1)}
-                className="text-gray-500 font-semibold flex items-center gap-2 hover:text-emerald-600 transition"
-              >
-                <ArrowLeft className="w-5 h-5" /> Back
-              </button>
-              <div className="text-gray-900 font-bold tracking-widest text-sm uppercase">
-                {editId ? "Edit Product" : "Create Drop"}
-              </div>
-            </div>
+
 
             {/* Stepper */}
             <div className="flex items-center mb-12">
@@ -356,24 +380,35 @@ export default function AddProduct() {
                       <BrandInput label="Initial Stock" type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="1" />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-100">
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700 tracking-wide">Category</label>
-                        <select name="category" value={form.category} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none">
-                          <option value="">Select Category</option>
-                          {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
-                        </select>
+                        <label className="text-sm font-semibold text-gray-700 tracking-wide">Category <span className="text-red-500">*</span></label>
+                        <CategoryPicker 
+                          categories={categories}
+                          value={form.category}
+                          onChange={(id) => setForm(p => ({ ...p, category: id }))}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700 tracking-wide">Unit Type</label>
-                        <select name="unit" value={form.unit} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none">
+                        <label className="text-sm font-semibold text-gray-700 tracking-wide">Unit Type <span className="text-red-500">*</span></label>
+                        <select name="unit" value={form.unit} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none">
                           <option value="">Select Unit</option>
                           {units.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
                         </select>
                       </div>
                     </div>
 
-                    <div className="flex gap-4">
+                    {selectedCategory && (
+                      <ProductAttributesForm
+                        categorySlug={selectedCategory.slug}
+                        initialValues={attributeValues}
+                        onChange={setAttributeValues}
+                        compact={false}
+                        onUnitSuggest={handleUnitSuggest}
+                      />
+                    )}
+
+                    <div className="flex gap-4 pt-4">
                       <button onClick={() => setStep(2)} className="px-8 py-4 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
                         Back
                       </button>

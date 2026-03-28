@@ -1,16 +1,20 @@
 // src/pages/auth/Profile.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, TrendingUp, Settings,
   LogOut, CheckCircle2, Boxes, AlertTriangle, ShoppingBag,
-  Search, Plus, Edit3, Trash2, Loader2
+  Search, Plus, Edit3, Trash2, Loader2, Download, MessageCircle
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import API from "../../utils/api";
 import toast from "react-hot-toast";
 import Navbar from "../../components/layout/Navbar";
+import { useCart } from "../../context/CartContext";
+import { useChat } from "../../store/useChat";
+import { generateInvoice } from "../../utils/generateInvoice";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const FONT = { fontFamily: "'Satoshi', sans-serif" };
 
@@ -41,6 +45,8 @@ export default function Profile() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const { addToCart } = useCart();
+  const { startChat } = useChat();
 
   useEffect(() => {
     if (!user) { navigate("/login"); return; }
@@ -72,6 +78,20 @@ export default function Profile() {
     finally { setDeleting(null); }
   };
 
+  const handleReorder = (order) => {
+    let successCount = 0;
+    order.items?.forEach(item => {
+      if (item.product && typeof item.product === 'object') {
+        addToCart(item.product, item.quantity, {});
+        successCount++;
+      }
+    });
+    if (successCount > 0) {
+      toast.success(`Items added to cart!`);
+      navigate("/cart");
+    }
+  };
+
   const tabs = isWholesaler
     ? [
         { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -92,6 +112,28 @@ export default function Profile() {
   
   const currentMonth = new Date().getMonth();
   const ordersThisMonth = orders.filter(o => new Date(o.createdAt).getMonth() === currentMonth).length;
+
+  const revenueData = useMemo(() => {
+    const grouped = {};
+    const msInDay = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    for(let i=6; i>=0; i--) {
+      const d = new Date(now.getTime() - i * msInDay);
+      grouped[d.toLocaleDateString("en-US", { month: "short", day: "numeric" })] = 0;
+    }
+    orders.forEach(o => {
+      if (o.status === "cancelled") return;
+      const d = new Date(o.createdAt);
+      const diffDays = Math.floor((now - d) / msInDay);
+      if (diffDays <= 6) {
+         const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+         if (grouped[dateStr] !== undefined) {
+           grouped[dateStr] += (o.totalAmount || 0);
+         }
+      }
+    });
+    return Object.keys(grouped).map(date => ({ name: date, Revenue: grouped[date] }));
+  }, [orders]);
 
   if (!user || loading) {
     return (
@@ -182,6 +224,31 @@ export default function Profile() {
                     <StatCard icon={Boxes} label="Total Stock" value={totalStock} />
                     <StatCard icon={ShoppingBag} label="Orders This Month" value={ordersThisMonth} />
                     <StatCard icon={AlertTriangle} label="Low Stock Items" value={lowStockItems} alert={lowStockItems > 0} />
+                  </div>
+
+                  {/* Revenue Chart */}
+                  <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <h2 className="text-sm font-semibold text-gray-900 mb-6">Revenue Over Time (Last 7 Days)</h2>
+                    <div className="w-full h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRevs" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} dy={10} />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} tickFormatter={(val) => `Rs${val}`} dx={-10} />
+                          <Tooltip 
+                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            formatter={(value) => [`Rs ${value.toLocaleString()}`, "Revenue"]}
+                          />
+                          <Area type="monotone" dataKey="Revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevs)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
 
                   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -346,16 +413,61 @@ export default function Profile() {
                               <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Items</th>
                               <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Amount</th>
                               <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                              <th className="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
                             {orders.map(o => (
-                              <tr key={o._id} className="hover:bg-gray-50 transition cursor-pointer" onClick={() => navigate(isWholesaler ? `/orders/kanban` : `/order-success?orderId=${o._id}&total=${o.totalAmount || o.total || 0}`)}>
-                                <td className="py-4 px-6 font-medium text-gray-900">#{o._id?.slice(-8).toUpperCase()}</td>
+                              <tr key={o._id} className="hover:bg-gray-50 transition">
+                                <td 
+                                  className="py-4 px-6 font-medium text-gray-900 cursor-pointer" 
+                                  onClick={() => navigate(isWholesaler ? `/orders/kanban` : `/order-success?orderId=${o._id}&total=${o.totalAmount || o.total || 0}`)}
+                                >
+                                  #{o._id?.slice(-8).toUpperCase()}
+                                </td>
                                 <td className="py-4 px-6 text-sm text-gray-500">{new Date(o.createdAt).toLocaleDateString()}</td>
                                 <td className="py-4 px-6 text-sm text-gray-600">{o.items?.length || 0} items</td>
                                 <td className="py-4 px-6 font-bold text-gray-900">Rs {Number(o.totalAmount || o.total || 0).toLocaleString()}</td>
                                 <td className="py-4 px-6">{getStatusBadge(o.status)}</td>
+                                <td className="py-4 px-6 text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isWholesaler && o.user?._id) {
+                                          startChat({ orderId: o._id, wholesalerId: o.user._id });
+                                        } else if (!isWholesaler) {
+                                          const partnerId = o.items[0]?.product?.wholesaler?._id || o.items[0]?.product?.wholesaler;
+                                          if (partnerId) startChat({ orderId: o._id, wholesalerId: partnerId });
+                                        }
+                                      }}
+                                      title="Message Partner"
+                                      className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                                    >
+                                      <MessageCircle className="w-4 h-4" />
+                                    </button>
+                                    
+                                    {o.status === "delivered" && (
+                                      <button 
+                                        onClick={() => generateInvoice(o, isWholesaler ? "wholesaler" : "retailer")} 
+                                        title="Download Invoice"
+                                        className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </button>
+                                    )}
+
+                                    {!isWholesaler && (o.status === "delivered" || o.status === "cancelled") && (
+                                      <button 
+                                        onClick={() => handleReorder(o)} 
+                                        title="Reorder Items"
+                                        className="p-2 text-gray-700 hover:text-black hover:bg-gray-100 rounded-lg transition flex items-center gap-1.5 font-semibold text-xs border border-gray-200"
+                                      >
+                                        <Package className="w-3.5 h-3.5" /> Reorder
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
                               </tr>
                             ))}
                           </tbody>

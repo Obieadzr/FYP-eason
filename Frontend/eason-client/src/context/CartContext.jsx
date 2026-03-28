@@ -55,7 +55,20 @@ export const CartProvider = ({ children }) => {
     return info.finalPrice || fallback;
   };
 
-  const addToCart = (product, quantity = 1) => {
+  const getTieredPriceForUser = (product, quantity) => {
+    let price = getPriceForUser(product);
+    if (user?.role === "retailer" && product.bulkPricing && product.bulkPricing.length > 0) {
+      const sortedTiers = [...product.bulkPricing].sort((a, b) => b.minQuantity - a.minQuantity);
+      for (const tier of sortedTiers) {
+        if (quantity >= tier.minQuantity) {
+          return tier.pricePerUnit;
+        }
+      }
+    }
+    return price;
+  };
+
+  const addToCart = (product, quantity = 1, selectedVariants = {}) => {
     if (toastId.current) toast.dismiss(toastId.current);
 
     if (!user) {
@@ -77,39 +90,54 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    const price = getPriceForUser(product);
-    if (price <= 0) {
+    // Let getTieredPriceForUser handle the price, but we first need to know if the user is allowed at all.
+    const basePrice = getPriceForUser(product);
+    if (basePrice <= 0) {
       toast.error("Price not available for your role", { duration: 4000 });
       return;
     }
 
     const currentStock = stockMap[product._id] ?? product.stock ?? 0;
-    const alreadyInCart = cart.find((item) => item._id === product._id)?.quantity || 0;
-    const requestedTotal = alreadyInCart + quantity;
+    // Calculate total quantity of THIS product across all variant combinations currently in cart
+    const totalSpecificProductInCart = cart
+      .filter(item => item._id === product._id)
+      .reduce((sum, item) => sum + item.quantity, 0);
 
-    if (requestedTotal > currentStock) {
+    const cartItemId = `${product._id}-${JSON.stringify(selectedVariants)}`;
+    
+    // The stock map tracks overall product stock, so we must check against the TOTAL of this product
+    const requestedTotalAcrossVariants = totalSpecificProductInCart + quantity;
+
+    if (requestedTotalAcrossVariants > currentStock && quantity > 0) {
       toast.error(
-        `Only ${currentStock} available! (${alreadyInCart} already in cart)`,
+        `Only ${currentStock} available in total! (${totalSpecificProductInCart} already in cart)`,
         { duration: 4500 }
       );
       return;
     }
 
     setCart((prev) => {
-      const existing = prev.find((item) => item._id === product._id);
+      const existing = prev.find((item) => item.cartItemId === cartItemId);
+      const finalQuantity = existing ? existing.quantity + quantity : quantity;
+      const tieredPrice = getTieredPriceForUser(product, finalQuantity);
+
+      let variantNames = Object.values(selectedVariants).map(v => typeof v === 'object' ? v.name : v).join(', ');
+      let displayName = variantNames ? `${product.name} (${variantNames})` : product.name;
+      
       let message = existing
-        ? `Updated: ${product.name} × ${quantity}`
-        : `Added: ${product.name}`;
+        ? `Updated: ${displayName} × ${finalQuantity}`
+        : `Added: ${displayName}`;
 
       toastId.current = toast.success(message, { duration: 2800 });
 
       if (existing) {
         return prev.map((item) =>
-          item._id === product._id
+          item.cartItemId === cartItemId
             ? {
                 ...item,
-                quantity: item.quantity + quantity,
-                total: price * (item.quantity + quantity),
+                quantity: finalQuantity,
+                pricePerUnit: tieredPrice,
+                total: tieredPrice * finalQuantity,
               }
             : item
         );
@@ -119,9 +147,11 @@ export const CartProvider = ({ children }) => {
         ...prev,
         {
           ...product,
-          quantity,
-          pricePerUnit: price,
-          total: price * quantity,
+          cartItemId,
+          selectedVariants,
+          quantity: finalQuantity,
+          pricePerUnit: tieredPrice,
+          total: tieredPrice * finalQuantity,
         },
       ];
     });
@@ -132,64 +162,71 @@ export const CartProvider = ({ children }) => {
     }));
   };
 
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (cartItemId, newQuantity) => {
     if (newQuantity <= 0) {
-      removeFromCart(id);
+      removeFromCart(cartItemId);
       return;
     }
 
-    const item = cart.find((i) => i._id === id);
+    const item = cart.find((i) => i.cartItemId === cartItemId);
     if (!item) return;
 
+    const productId = item._id;
     const originalStock = item.stock ?? 9999;
-    const currentAvailable = stockMap[id] ?? originalStock;
-    const currentInCart = cart
-      .filter((i) => i._id === id)
+    const currentInCartAllVariants = cart
+      .filter((i) => i._id === productId)
       .reduce((sum, i) => sum + i.quantity, 0);
 
-    const newTotalInCart = currentInCart - item.quantity + newQuantity;
+    const newTotalInCartAllVariants = currentInCartAllVariants - item.quantity + newQuantity;
 
-    if (newTotalInCart > originalStock) {
+    if (newTotalInCartAllVariants > originalStock) {
       toast.error(`Cannot exceed available stock (${originalStock})`, {
         duration: 4000,
       });
       return;
     }
 
+    const tieredPrice = getTieredPriceForUser(item, newQuantity);
+
     setCart((prev) =>
-      prev.map((item) =>
-        item._id === id
+      prev.map((cartItem) =>
+        cartItem.cartItemId === cartItemId
           ? {
-              ...item,
+              ...cartItem,
               quantity: newQuantity,
-              total: item.pricePerUnit * newQuantity,
+              pricePerUnit: tieredPrice,
+              total: tieredPrice * newQuantity,
             }
-          : item
+          : cartItem
       )
     );
 
     setStockMap((prev) => ({
       ...prev,
-      [id]: originalStock - newTotalInCart,
+      [productId]: originalStock - newTotalInCartAllVariants,
     }));
   };
 
-  const removeFromCart = (id) => {
-    const item = cart.find((i) => i._id === id);
+  const removeFromCart = (cartItemId) => {
+    const item = cart.find((i) => i.cartItemId === cartItemId);
     if (!item) return;
 
-    toastId.current = toast.success(`Removed: ${item.name}`, {
+    let variantNames = Object.values(item.selectedVariants || {}).map(v => typeof v === 'object' ? v.name : v).join(', ');
+    let displayName = variantNames ? `${item.name} (${variantNames})` : item.name;
+
+    toastId.current = toast.success(`Removed: ${displayName}`, {
       duration: 2200,
     });
 
+    const productId = item._id;
     const originalStock = item.stock ?? 9999;
     const wasInCart = item.quantity;
 
-    setCart((prev) => prev.filter((i) => i._id !== id));
+    setCart((prev) => prev.filter((i) => i.cartItemId !== cartItemId));
 
     setStockMap((prev) => ({
       ...prev,
-      [id]: (prev[id] ?? originalStock) + wasInCart,
+      [productId]: (prev[productId] ?? originalStock) + wasInCart,
     }));
   };
 

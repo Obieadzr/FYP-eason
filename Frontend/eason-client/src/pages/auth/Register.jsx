@@ -1,8 +1,9 @@
 // src/pages/auth/Register.jsx
-import React, { useState, Suspense } from "react";
+import React, { useState, Suspense, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ArrowRight, Check } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight, Check, Mail } from "lucide-react";
 import API from "../../utils/api.js";
+import { useAuthStore } from "../../store/authStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { Canvas } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere, MeshWobbleMaterial, Torus } from "@react-three/drei";
@@ -47,6 +48,7 @@ const inputCls = "w-full bg-white/5 border border-white/20 text-white placeholde
 
 const Register = () => {
   const navigate = useNavigate();
+  const { login } = useAuthStore();
   const [showPass, setShowPass]       = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading]         = useState(false);
@@ -54,6 +56,21 @@ const Register = () => {
   const [formData, setFormData] = useState({
     fname: "", lname: "", email: "", password: "", confirmPassword: "", role: "retailer",
   });
+  
+  // New States for OTP Flow
+  const [step, setStep] = useState(1);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (resendCooldown > 0) {
+      timer = setInterval(() => setResendCooldown(c => c - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
@@ -63,18 +80,63 @@ const Register = () => {
     setLoading(true);
     setError("");
     try {
-      await API.post("/auth/register", {
+      const res = await API.post("/auth/register", {
         firstName: formData.fname,
         lastName: formData.lname,
         email: formData.email,
         password: formData.password,
         role: formData.role,
       });
-      navigate("/login");
+      // Switch to validation step
+      setRegisteredEmail(formData.email);
+      setStep(2);
+      setError("");
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed. Try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    if (otp.length !== 6) return setError("Enter a valid 6-digit code.");
+    setLoading(true);
+    setError("");
+    try {
+      const res = await API.post("/auth/verify-email", { email: registeredEmail, otp });
+      
+      if (res.data.token && res.data.user) {
+        // Auto-login!
+        localStorage.setItem("eason_token", res.data.token);
+        login(res.data.user);
+        
+        // Redirect based on role
+        if (res.data.user.role === "admin") navigate("/dashboard");
+        else if (res.data.user.role === "wholesaler") navigate("/wholesaler");
+        else navigate("/marketplace");
+      } else {
+        navigate("/login", { state: { message: "Email verified successfully! Please log in." }});
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Verification failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (resendCooldown > 0) return;
+    setResendLoading(true);
+    setError("");
+    try {
+      await API.post("/auth/resend-otp", { email: registeredEmail });
+      setResendCooldown(60); // 1 minute cooldown
+      setError("A new code has been sent.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to resend code.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -119,117 +181,193 @@ const Register = () => {
             eAson<span className="text-white">.</span>
           </Link>
 
-          <h2 className="text-4xl font-bold tracking-tighter text-white mb-2">Create account</h2>
-          <p className="text-white/50 text-sm mb-12 uppercase tracking-widest font-bold">
-            Already have one?{" "}
-            <Link to="/login" className="text-white hover:text-gray-300 transition-colors">
-              Sign in
-            </Link>
-          </p>
+          {step === 1 ? (
+            <>
+              <h2 className="text-4xl font-bold tracking-tighter text-white mb-2">Create account</h2>
+              <p className="text-white/50 text-sm mb-12 uppercase tracking-widest font-bold">
+                Already have one?{" "}
+                <Link to="/login" className="text-white hover:text-gray-300 transition-colors">
+                  Sign in
+                </Link>
+              </p>
 
-          {/* Role toggle */}
-          <div className="flex border border-white/20 mb-10">
-            {["retailer", "wholesaler"].map(r => (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setFormData({ ...formData, role: r })}
-                className={`flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-colors ${
-                  formData.role === r
-                    ? "bg-white text-black"
-                    : "text-white/50 hover:bg-white/10 hover:text-white"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Field label="First name">
-                <input name="fname" value={formData.fname} onChange={handleChange}
-                  placeholder="Aarav" required autoComplete="given-name"
-                  className={inputCls} />
-              </Field>
-              <Field label="Last name">
-                <input name="lname" value={formData.lname} onChange={handleChange}
-                  placeholder="Thapa" required autoComplete="family-name"
-                  className={inputCls} />
-              </Field>
-            </div>
-
-            <Field label="Email">
-              <input type="email" name="email" value={formData.email} onChange={handleChange}
-                placeholder="aarav@example.com" required autoComplete="email"
-                className={inputCls} />
-            </Field>
-
-            <Field label="Password">
-              <div className="relative">
-                <input
-                  type={showPass ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Min. 8 characters"
-                  required
-                  className={`${inputCls} pr-11`}
-                />
-                <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
-                  {showPass ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                </button>
+              {/* Role toggle */}
+              <div className="flex border border-white/20 mb-10">
+                {["retailer", "wholesaler"].map(r => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, role: r })}
+                    className={`flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-colors ${
+                      formData.role === r
+                        ? "bg-white text-black"
+                        : "text-white/50 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
               </div>
-              {formData.password.length > 0 && (
-                <div className={`mt-1.5 text-[11px] font-medium ${strength ? "text-emerald-400" : "text-amber-400"}`}>
-                  {strength ? "✓ Strong password" : "Use 8+ chars, a number, and uppercase"}
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-3 mb-6 relative">
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center">
+                  <Mail className="w-6 h-6 text-emerald-400" />
                 </div>
-              )}
-            </Field>
+              </div>
+              <h2 className="text-4xl font-bold tracking-tighter text-white mb-2">Verify email</h2>
+              <p className="text-white/50 text-sm mb-10 leading-relaxed">
+                We've sent a 6-digit verification code to <span className="text-white font-medium">{registeredEmail}</span>.
+              </p>
+            </>
+          )}
 
-            <Field label="Confirm password">
-              <div className="relative">
+          {step === 1 ? (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="First name">
+                  <input name="fname" value={formData.fname} onChange={handleChange}
+                    placeholder="Aarav" required autoComplete="given-name"
+                    className={inputCls} />
+                </Field>
+                <Field label="Last name">
+                  <input name="lname" value={formData.lname} onChange={handleChange}
+                    placeholder="Thapa" required autoComplete="family-name"
+                    className={inputCls} />
+                </Field>
+              </div>
+
+              <Field label="Email">
+                <input type="email" name="email" value={formData.email} onChange={handleChange}
+                  placeholder="aarav@example.com" required autoComplete="email"
+                  className={inputCls} />
+              </Field>
+
+              <Field label="Password">
+                <div className="relative">
+                  <input
+                    type={showPass ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Min. 8 characters"
+                    required
+                    className={`${inputCls} pr-11`}
+                  />
+                  <button type="button" onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
+                    {showPass ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
+                </div>
+                {formData.password.length > 0 && (
+                  <div className={`mt-1.5 text-[11px] font-medium ${strength ? "text-emerald-400" : "text-amber-400"}`}>
+                    {strength ? "✓ Strong password" : "Use 8+ chars, a number, and uppercase"}
+                  </div>
+                )}
+              </Field>
+
+              <Field label="Confirm password">
+                <div className="relative">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    placeholder="Repeat password"
+                    required
+                    className={`${inputCls} pr-11`}
+                  />
+                  <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                    className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
+                    {showConfirm ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
+                </div>
+              </Field>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={`text-xs px-4 py-4 uppercase tracking-widest font-bold text-center ${
+                      error.includes("sent") 
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50" 
+                        : "bg-red-600 border border-red-500 text-white"
+                    }`}
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <motion.button
+                type="submit"
+                disabled={loading}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-5 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 mt-6 text-sm"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? "Creating account..." : "Create Account"}
+                {!loading && <ArrowRight className="w-5 h-5" />}
+              </motion.button>
+            </form>
+          ) : (
+            <form onSubmit={handleVerify} className="space-y-6">
+              <Field label="6-Digit Verification Code">
                 <input
-                  type={showConfirm ? "text" : "password"}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Repeat password"
+                  type="text"
+                  maxLength={6}
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                  placeholder="000000"
                   required
-                  className={`${inputCls} pr-11`}
+                  className={`${inputCls} text-center text-3xl tracking-[0.5em] font-mono py-6 placeholder:text-white/10`}
                 />
-                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition">
-                  {showConfirm ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+              </Field>
+
+              <AnimatePresence>
+                {error && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={`text-xs px-4 py-4 uppercase tracking-widest font-bold text-center ${
+                      error.includes("sent") 
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50" 
+                        : "bg-red-600 border border-red-500 text-white"
+                    }`}
+                  >
+                    {error}
+                  </motion.p>
+                )}
+              </AnimatePresence>
+
+              <motion.button
+                type="submit"
+                disabled={loading || otp.length < 6}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-5 bg-emerald-500 text-black font-bold uppercase tracking-widest hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 text-sm"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? "Verifying..." : "Verify & Continue"}
+                {!loading && <Check className="w-5 h-5" />}
+              </motion.button>
+
+              <div className="text-center pt-4">
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resendLoading || resendCooldown > 0}
+                  className="text-white/40 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
+                >
+                  {resendLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Didn't receive code? Resend"}
                 </button>
               </div>
-            </Field>
-
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-white text-xs bg-red-600 border border-red-500 px-4 py-4 uppercase tracking-widest font-bold text-center"
-                >
-                  {error}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            <motion.button
-              type="submit"
-              disabled={loading}
-              whileTap={{ scale: 0.98 }}
-              className="w-full py-5 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-3 mt-6 text-sm"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? "Creating account..." : "Create Account"}
-              {!loading && <ArrowRight className="w-5 h-5" />}
-            </motion.button>
-          </form>
+            </form>
+          )}
 
           <p className="mt-8 text-center text-white/20 text-xs">
             By signing up you agree to our{" "}

@@ -65,6 +65,10 @@ const productSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    attributes: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
     image: {
       type: String,
       default: null,

@@ -7,7 +7,9 @@ import Footer from "../../components/layout/Footer";
 import {
   ArrowRight, Plus, Package, Store, Warehouse, ShoppingBag,
   CheckCircle, Zap, Shield, Users, ChevronDown,
+  MapPin, Mail, Phone,
 } from "lucide-react";
+import toast from "react-hot-toast";
 
 /* ─────────────────────────────────────────────────────────────────────────── */
 
@@ -180,21 +182,22 @@ export default function LandingPage() {
         </motion.div>
 
         {/* Scroll hint */}
-        <motion.div
+        <motion.button
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1.4, duration: 1 }}
-          className="absolute bottom-6 right-8 z-10 flex items-center gap-2 text-white/50 text-xs"
+          onClick={() => document.getElementById("stats")?.scrollIntoView({ behavior: "smooth" })}
+          className="absolute bottom-6 right-8 z-10 flex items-center gap-2 text-white/50 text-xs cursor-pointer hover:text-white transition-colors"
         >
           <span className="tracking-widest uppercase font-bold text-[10px]">Scroll</span>
           <ChevronDown className="w-4 h-4 animate-bounce" />
-        </motion.div>
+        </motion.button>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
           SOCIAL PROOF — animated counting stats
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-white border-b border-gray-100">
+      <section id="stats" className="bg-white border-b border-gray-100">
         <div className="max-w-screen-xl mx-auto flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-gray-200">
           <AnimatedStat target={8000} suffix="+" label="Active Traders" />
           <AnimatedStat prefix="Rs " target={12000000} suffix="+" label="Daily Volume" />
@@ -227,7 +230,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════════════════════════════════════════
           EDITORIAL SPLIT — "Order. Track. Grow." — dark/white
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-[#111]">
+      <section id="how-it-works" className="bg-[#111]">
         <div className="max-w-screen-2xl mx-auto">
 
           {/* Row 1 — big text + description */}
@@ -288,7 +291,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════════════════════════════════════════
           TRUST PILLS — white section
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-white py-32 border-b border-black">
+      <section id="why-us" className="bg-white py-32 border-b border-black">
         <div className="max-w-screen-2xl mx-auto px-8">
           <FadeUp>
             <p className="text-sm font-bold uppercase tracking-widest text-black mb-12 border-b-4 border-black inline-block pb-2">Why Traders Choose Us</p>
@@ -310,7 +313,7 @@ export default function LandingPage() {
       {/* ══════════════════════════════════════════════════════════════════
           DUAL: RETAILER + SUPPLIER — dark
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-white py-32">
+      <section id="retailers" className="bg-white py-32">
         <div className="max-w-screen-2xl mx-auto px-8">
           <FadeUp className="mb-16">
             <h2 className="text-5xl md:text-7xl font-bold text-black leading-tight tracking-tighter uppercase">
@@ -375,7 +378,7 @@ export default function LandingPage() {
 
             {/* Supplier */}
             <FadeUp delay={0.15}>
-              <div className="relative bg-black rounded-none overflow-hidden h-full">
+              <div id="suppliers" className="relative bg-black rounded-none overflow-hidden h-full">
                 <div className="relative p-10 md:p-16 text-white h-full flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-12">
@@ -436,32 +439,39 @@ export default function LandingPage() {
             <p className="text-sm font-bold uppercase tracking-widest text-white mb-4 border-b-4 border-white inline-block pb-2">What Traders Say</p>
           </FadeUp>
         </div>
-        <div className="flex px-8 overflow-x-auto scrollbar-hide snap-x gap-6">
-          {[
-            { q: "Saved me 5 hours every week. No more 5AM market trips.", n: "Ramesh K.",  r: "Retailer · Asan, KTM"       },
-            { q: "Orders flow while I sleep. This is how business should feel.", n: "Sunita M.",  r: "Wholesaler · Bhotebahal"    },
-            { q: "Prices are real. No bargaining nonsense. Love it.", n: "Bikash T.",  r: "Retailer · Kalimati"         },
-            { q: "My stock reaches shops I didn't even know existed.", n: "Priya S.",   r: "Supplier · Newroad, KTM"    },
-            { q: "Cart to checkout in under 2 minutes. Insane.", n: "Anil R.",   r: "Retailer · Patan"            },
-          ].map((t, i) => (
-            <div
-              key={i}
-              className="shrink-0 w-80 lg:w-96 border border-white/20 p-8 sm:p-10 bg-black hover:border-white transition-colors snap-center"
-            >
-              <p className="text-xl font-bold tracking-tighter text-white uppercase leading-tight mb-10">"{t.q}"</p>
-              <div>
-                <p className="text-sm font-bold text-white tracking-widest uppercase">{t.n}</p>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">{t.r}</p>
-              </div>
-            </div>
-          ))}
+        <div className="w-full overflow-hidden" style={{ maskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 10%, black 90%, transparent)" }}>
+          <div className="flex w-max animate-marquee hover:[animation-play-state:paused]">
+            {[...Array(2)].map((_, arrayIdx) => (
+              <React.Fragment key={arrayIdx}>
+                {[
+                  { q: "Saved me 5 hours every week. No more 5AM market trips.", n: "Ramesh K.",  r: "Retailer · Asan, KTM"       },
+                  { q: "Orders flow while I sleep. This is how business should feel.", n: "Sunita M.",  r: "Wholesaler · Bhotebahal"    },
+                  { q: "Prices are real. No bargaining nonsense. Love it.", n: "Bikash T.",  r: "Retailer · Kalimati"         },
+                  { q: "My stock reaches shops I didn't even know existed.", n: "Priya S.",   r: "Supplier · Newroad, KTM"    },
+                  { q: "Cart to checkout in under 2 minutes. Insane.", n: "Anil R.",   r: "Retailer · Patan"            },
+                ].map((t, i) => (
+                  <div
+                    key={`${arrayIdx}-${i}`}
+                    className="relative shrink-0 min-w-[360px] mx-3 border border-white/10 p-8 bg-[#111] rounded-2xl border-l-2 border-l-emerald-500/40 hover:bg-[#1a1a1a] transition-colors"
+                  >
+                    <span className="absolute top-4 left-6 text-emerald-400 text-5xl font-serif">"</span>
+                    <p className="text-lg font-medium text-white leading-tight mb-8 mt-4 relative z-10">{t.q}</p>
+                    <div>
+                      <p className="text-sm font-bold text-white uppercase">{t.n}</p>
+                      <p className="text-xs text-emerald-400 uppercase tracking-widest mt-1">{t.r}</p>
+                    </div>
+                  </div>
+                ))}
+              </React.Fragment>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
           FINAL CTA — full black, massive type, Nike-like
       ══════════════════════════════════════════════════════════════════ */}
-      <section className="bg-white relative overflow-hidden py-32 border-t border-black">
+      <section id="contact-cta" className="bg-white relative overflow-hidden py-32 border-t border-black">
         <div className="max-w-screen-2xl mx-auto px-8">
           <FadeUp>
             <h2 className="text-[clamp(4.5rem,14vw,11rem)] font-bold text-black leading-[0.85] tracking-tighter uppercase mb-10">
@@ -488,6 +498,87 @@ export default function LandingPage() {
               >
                 Browse Marketplace
               </button>
+            </div>
+          </FadeUp>
+        </div>
+      </section>
+
+      {/* ══════════════════════════════════════════════════════════════════
+          CONTACT FORM SECTION
+      ══════════════════════════════════════════════════════════════════ */}
+      <section id="contact" className="bg-white py-32 border-t border-gray-100">
+        <div className="max-w-screen-xl mx-auto px-6 md:px-8 grid lg:grid-cols-2 gap-16 lg:gap-24">
+          <FadeUp>
+            <p className="text-xs text-emerald-600 font-bold uppercase tracking-widest mb-6">Get in touch</p>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tighter text-black mb-6">
+              We'd love to hear from you.
+            </h2>
+            <p className="text-gray-500 text-sm font-medium leading-relaxed max-w-sm mb-12">
+              Whether you're a retailer looking to source wholesale or a supplier wanting to list your products — reach out and we'll get back to you within 24 hours.
+            </p>
+            
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                  <MapPin className="w-4 h-4 text-emerald-600" />
+                </div>
+                <p className="text-sm text-gray-700 font-medium">Kathmandu, Bagmati Province, Nepal</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-emerald-600" />
+                </div>
+                <p className="text-sm text-gray-700 font-medium">hello@eason.com.np</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-emerald-600" />
+                </div>
+                <p className="text-sm text-gray-700 font-medium">+977 9800000000</p>
+              </div>
+            </div>
+          </FadeUp>
+
+          <FadeUp delay={0.1}>
+            <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-sm">
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.target);
+                  if(!fd.get("name") || !fd.get("email") || !fd.get("role") || !fd.get("message")) {
+                    toast.error("Please fill in all fields.");
+                    return;
+                  }
+                  toast.success("Message sent! We'll reply within 24 hours.");
+                  e.target.reset();
+                }}
+                className="space-y-4"
+              >
+                <div>
+                  <label className="block text-xs font-semibold text-gray-900 uppercase tracking-widest mb-2">Full Name</label>
+                  <input name="name" type="text" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-900 uppercase tracking-widest mb-2">Email</label>
+                  <input name="email" type="email" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-900 uppercase tracking-widest mb-2">Role</label>
+                  <select name="role" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition bg-white cursor-pointer hover:border-gray-300">
+                    <option value="">Select your role...</option>
+                    <option value="retailer">I'm a Retailer</option>
+                    <option value="supplier">I'm a Supplier</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-900 uppercase tracking-widest mb-2">Message</label>
+                  <textarea name="message" rows="5" className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition resize-none" />
+                </div>
+                <button type="submit" className="w-full bg-black text-white rounded-xl py-4 font-semibold hover:bg-gray-900 transition mt-2">
+                  Send Message
+                </button>
+              </form>
             </div>
           </FadeUp>
         </div>

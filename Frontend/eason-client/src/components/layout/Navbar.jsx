@@ -33,10 +33,10 @@ export default function Navbar() {
   }, []);
 
   const links = [
-    { label: "How it Works", href: "#how" },
-    { label: "For Retailers", href: "#retailers" },
-    { label: "For Suppliers", href: "#suppliers" },
-    { label: "Contact",       href: "#contact" },
+    { label: "Marketplace",  to: "/marketplace" },
+    { label: "How It Works", to: "/how-it-works" },
+    { label: "Sell on eAson",to: "/sell" },
+    { label: "Contact",      to: "/contact" },
   ];
 
   const handleCta = () => navigate(isAuthenticated ? "/marketplace" : "/register");
@@ -66,9 +66,9 @@ export default function Navbar() {
           {/* Desktop links — centered */}
           <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             {links.map(link => (
-              <a
+              <button
                 key={link.label}
-                href={link.href}
+                onClick={() => navigate(link.to)}
                 onMouseEnter={() => setHovered(link.label)}
                 onMouseLeave={() => setHovered(null)}
                 className={`relative px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
@@ -87,7 +87,7 @@ export default function Navbar() {
                     />
                   )}
                 </AnimatePresence>
-              </a>
+              </button>
             ))}
           </div>
 
@@ -192,16 +192,18 @@ export default function Navbar() {
             >
               <div className="px-6 py-4 space-y-1">
                 {links.map(l => (
-                  <a
+                  <button
                     key={l.label}
-                    href={l.href}
-                    onClick={() => setMenuOpen(false)}
-                    className={`block px-4 py-3 rounded-xl text-sm font-medium transition ${
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate(l.to);
+                    }}
+                    className={`w-full text-left block px-4 py-3 rounded-xl text-sm font-medium transition ${
                       scrolled ? "text-gray-600 hover:bg-gray-50 hover:text-gray-900" : "text-white/70 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     {l.label}
-                  </a>
+                  </button>
                 ))}
                 <div className="pt-3 border-t border-white/10 flex gap-2">
                   {!isAuthenticated && (

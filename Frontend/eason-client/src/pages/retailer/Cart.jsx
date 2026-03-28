@@ -138,7 +138,12 @@ function OrderSummary({ cart, cartTotal }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900 truncate">{item.name}</p>
-              <p className="text-xs text-gray-400">×{item.quantity}</p>
+              {item.selectedVariants && Object.keys(item.selectedVariants).length > 0 && (
+                <p className="text-[10px] text-gray-500 truncate">
+                  {Object.values(item.selectedVariants).map(v => typeof v === 'object' ? v.name : v).join(', ')}
+                </p>
+              )}
+              <p className="text-xs text-gray-400 mt-0.5">×{item.quantity}</p>
             </div>
             <span className="text-xs font-semibold text-gray-900 shrink-0">
               Rs {(item.pricePerUnit * item.quantity).toLocaleString()}
@@ -203,10 +208,12 @@ export default function Cart() {
         try {
           const res = await API.get(`/products/${item._id}`);
           const currentStock = res.data.stock || 0;
-          if (currentStock <= 0) removeFromCart(item._id);
-          else if (currentStock < item.quantity) {
-            updateQuantity(item._id, currentStock);
-            toast(`Adjusted "${item.name}" to max available (${currentStock})`, { icon: "⚠️" });
+          if (currentStock <= 0) removeFromCart(item.cartItemId);
+          else {
+             if (currentStock < item.quantity) {
+                updateQuantity(item.cartItemId, currentStock);
+                toast(`Adjusted "${item.name}" to max available (${currentStock})`, { icon: "⚠️" });
+             }
           }
         } catch {}
       }
@@ -237,6 +244,38 @@ export default function Cart() {
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to place order.", { id: toastId });
     } finally { setIsProcessing(false); }
+  };
+
+  const handleRealKhaltiPayment = async () => {
+    setIsProcessing(true);
+    const toastId = toast.loading("Initiating Khalti Payment...");
+    try {
+      // 1. Place the order first
+      const payload = {
+        items: cart.map(i => ({ _id: i._id, quantity: i.quantity })),
+        shippingAddress: shippingInfo.address,
+        phone: shippingInfo.phone,
+        notes: shippingInfo.notes || undefined,
+        paymentMethod: "khalti",
+      };
+      const orderRes = await API.post("/orders", payload);
+      const orderId = orderRes.data.order._id;
+
+      // 2. Initiate Khalti payment
+      const initRes = await API.post("/payment/khalti/initiate", {
+        orderId,
+        return_url: `${window.location.origin}/payment/success`
+      });
+
+      if (initRes.data.payment_url) {
+        toast.success("Redirecting to Khalti...", { id: toastId });
+        clearCart();
+        window.location.href = initRes.data.payment_url;
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Payment initiation failed.", { id: toastId });
+      setIsProcessing(false);
+    }
   };
 
   const handleFakePayment = async () => {
@@ -343,19 +382,25 @@ export default function Cart() {
                           {/* Info */}
                           <div className="flex-1 flex flex-col justify-between">
                             <div className="flex justify-between">
-                              <div>
-                                <p
-                                  className="font-medium text-gray-900 hover:text-emerald-600 cursor-pointer transition text-sm"
-                                  onClick={() => navigate(`/marketplace/product/${item._id}`)}
-                                >
+                              <div onClick={() => navigate(`/marketplace/product/${item._id}`)} className="cursor-pointer">
+                                <p className="font-medium text-gray-900 hover:text-emerald-600 transition text-sm">
                                   {item.name}
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">
+                                {item.selectedVariants && Object.keys(item.selectedVariants).length > 0 && (
+                                  <p className="text-xs text-gray-500 mt-1 flex flex-wrap gap-1.5">
+                                    {Object.entries(item.selectedVariants).map(([k, v]) => (
+                                      <span key={k} className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] uppercase font-semibold text-gray-700">
+                                        {(typeof v === 'object' ? v.name : v)}
+                                      </span>
+                                    ))}
+                                  </p>
+                                )}
+                                <p className="text-xs text-gray-400 mt-1">
                                   Rs {item.pricePerUnit.toLocaleString()} / unit
                                 </p>
                               </div>
                               <button
-                                onClick={() => removeFromCart(item._id)}
+                                onClick={() => removeFromCart(item.cartItemId)}
                                 className="text-gray-300 hover:text-red-500 transition p-1 h-fit"
                               >
                                 <X className="w-4 h-4" />
@@ -366,7 +411,7 @@ export default function Cart() {
                               {/* Qty */}
                               <div className="flex items-center border border-gray-200 rounded-full overflow-hidden">
                                 <button
-                                  onClick={() => updateQuantity(item._id, Math.max(1, item.quantity - 1))}
+                                  onClick={() => updateQuantity(item.cartItemId, Math.max(1, item.quantity - 1))}
                                   disabled={item.quantity <= 1}
                                   className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-40 transition"
                                 >
@@ -374,7 +419,7 @@ export default function Cart() {
                                 </button>
                                 <span className="w-10 text-center text-sm font-semibold text-gray-900">{item.quantity}</span>
                                 <button
-                                  onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                                  onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)}
                                   className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition"
                                 >
                                   <Plus className="w-3.5 h-3.5" />
@@ -580,7 +625,12 @@ export default function Cart() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
-                          <p className="text-xs text-gray-400">×{item.quantity}</p>
+                          {item.selectedVariants && Object.keys(item.selectedVariants).length > 0 && (
+                            <p className="text-xs text-gray-500 line-clamp-1 mt-0.5 block">
+                              {Object.values(item.selectedVariants).map(v => typeof v === 'object' ? v.name : v).join(', ')}
+                            </p>
+                          )}
+                          <p className="text-xs text-gray-400 mt-0.5">×{item.quantity}</p>
                         </div>
                         <p className="text-sm font-semibold">Rs {(item.pricePerUnit * item.quantity).toLocaleString()}</p>
                       </div>
@@ -624,6 +674,16 @@ export default function Cart() {
                     >
                       {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                       {isProcessing ? "Placing..." : "Place Order (COD)"}
+                    </motion.button>
+                  ) : paymentMethod === "khalti" ? (
+                    <motion.button
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleRealKhaltiPayment}
+                      disabled={isProcessing}
+                      className="flex-1 py-4 bg-[#5C2D91] text-white rounded-full text-sm font-semibold hover:bg-purple-900 disabled:opacity-70 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                    >
+                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                      {isProcessing ? "Redirecting..." : "Pay with Khalti"}
                     </motion.button>
                   ) : (
                     <motion.button

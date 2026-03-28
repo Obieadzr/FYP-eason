@@ -41,12 +41,23 @@ export const createOrder = async (req, res) => {
         });
       }
 
+      let priceToUse = updated.wholesalerPrice;
+      if (updated.bulkPricing && updated.bulkPricing.length > 0) {
+        const sortedTiers = updated.bulkPricing.sort((a, b) => b.minQuantity - a.minQuantity);
+        for (const tier of sortedTiers) {
+          if (cartItem.quantity >= tier.minQuantity) {
+            priceToUse = tier.pricePerUnit;
+            break;
+          }
+        }
+      }
+
       orderItems.push({
         product: updated._id,
         quantity: cartItem.quantity,
-        pricePerUnit: updated.wholesalerPrice,
+        pricePerUnit: priceToUse,
       });
-      totalAmount += updated.wholesalerPrice * cartItem.quantity;
+      totalAmount += priceToUse * cartItem.quantity;
     }
 
     // Server-side tax calculation (13% Nepal VAT)

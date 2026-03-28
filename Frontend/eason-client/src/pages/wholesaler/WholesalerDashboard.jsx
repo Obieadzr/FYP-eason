@@ -1,17 +1,20 @@
 // src/pages/wholesaler/WholesalerDashboard.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Package, TrendingUp, ShoppingBag, Plus, Eye, MessageCircle,
   BarChart3, ArrowRight, Store, CheckCircle, Clock, AlertCircle,
   LogOut, Settings, Search, ShoppingCart, Trash2, Edit3, X,
-  Loader2, Image, DollarSign, Layers, Tag,
+  Loader2, Image, DollarSign, Layers, Tag, Truck, Download
 } from "lucide-react";
 import API from "../../utils/api";
 import { useAuthStore } from "../../store/authStore";
 import { useCart } from "../../context/CartContext";
+import { useChat } from "../../store/useChat";
+import { generateInvoice } from "../../utils/generateInvoice";
 import toast from "react-hot-toast";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 const FONT = { fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" };
@@ -39,6 +42,7 @@ function ProductModal({ product, categories, onClose, onSave }) {
     stock:       product?.stock       || "",
     category:    product?.category?._id || product?.category || "",
     image:       null,
+    bulkPricing: product?.bulkPricing || [],
   });
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(
@@ -58,7 +62,15 @@ function ProductModal({ product, categories, onClose, onSave }) {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v !== null && v !== "") fd.append(k, v); });
+      Object.entries(form).forEach(([k, v]) => { 
+        if (v !== null && v !== "") {
+          if (k === "bulkPricing") {
+             fd.append(k, JSON.stringify(v));
+          } else {
+             fd.append(k, v);
+          }
+        } 
+      });
       if (isEdit) {
         await API.put(`/products/${product._id}`, fd);
         toast.success("Product updated!");
@@ -147,6 +159,57 @@ function ProductModal({ product, categories, onClose, onSave }) {
             </div>
           )}
 
+          {/* Tiered Pricing Section */}
+          <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50/50">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Bulk Pricing Tiers (Optional)</label>
+              <button 
+                type="button" 
+                onClick={() => setForm({ ...form, bulkPricing: [...form.bulkPricing, { minQuantity: "", pricePerUnit: "" }] })}
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add Tier
+              </button>
+            </div>
+            {form.bulkPricing.map((tier, index) => (
+              <div key={index} className="flex gap-3 mb-3 items-center">
+                <input 
+                  type="number" 
+                  min="2" 
+                  placeholder="Min Qty (e.g. 100)" 
+                  value={tier.minQuantity} 
+                  onChange={e => {
+                    const newTiers = [...form.bulkPricing];
+                    newTiers[index].minQuantity = Number(e.target.value);
+                    setForm({ ...form, bulkPricing: newTiers });
+                  }} 
+                  className={inputCls} 
+                />
+                <input 
+                  type="number" 
+                  placeholder="Price (e.g. 2300)" 
+                  value={tier.pricePerUnit} 
+                  onChange={e => {
+                    const newTiers = [...form.bulkPricing];
+                    newTiers[index].pricePerUnit = Number(e.target.value);
+                    setForm({ ...form, bulkPricing: newTiers });
+                  }} 
+                  className={inputCls} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setForm({ ...form, bulkPricing: form.bulkPricing.filter((_, i) => i !== index) })}
+                  className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {form.bulkPricing.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-2">No bulk tiers set. Click 'Add Tier' to set volume discounts.</p>
+            )}
+          </div>
+
           <motion.button
             type="submit"
             disabled={loading}
@@ -167,10 +230,12 @@ export default function WholesalerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const { cartCount } = useCart();
+  const { startChat } = useChat();
 
   const [myProducts, setMyProducts] = useState([]);
   const [orders, setOrders]         = useState([]);
   const [categories, setCategories] = useState([]);
+  const [wallet, setWallet]         = useState(null);
   const [loading, setLoading]       = useState(true);
   const [activeTab, setActiveTab]   = useState("overview");
   const [search, setSearch]         = useState("");
@@ -179,14 +244,16 @@ export default function WholesalerDashboard() {
 
   const load = async () => {
     try {
-      const [prodRes, orderRes, catRes] = await Promise.all([
+      const [prodRes, orderRes, catRes, walletRes] = await Promise.all([
         API.get("/products/my"),
         API.get("/orders/wholesaler").catch(() => ({ data: [] })),
         API.get("/categories").catch(() => ({ data: [] })),
+        API.get("/payment/wallet").catch(() => ({ data: { wallet: null } })),
       ]);
       setMyProducts(prodRes.data || []);
       setOrders(orderRes.data || []);
       setCategories(catRes.data || []);
+      setWallet(walletRes.data?.wallet || null);
     } catch { /* silent */ }
     finally { setLoading(false); }
   };
@@ -205,15 +272,56 @@ export default function WholesalerDashboard() {
     } finally { setDeleting(null); }
   };
 
+  const handleMarkAsSent = async (id) => {
+    try {
+      await API.put(`/orders/${id}/status`, { status: "shipped" });
+      setOrders(prev => prev.map(o => o._id === id ? { ...o, status: "shipped" } : o));
+      toast.success("Order marked as sent!");
+    } catch {
+      toast.error("Failed to update status.");
+    }
+  };
+
   const filtered = myProducts.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
   const totalStock  = myProducts.reduce((s, p) => s + (p.stock || 0), 0);
   const pending     = orders.filter(o => o.status === "pending").length;
+
+  const revenueData = useMemo(() => {
+    // Group orders by date
+    const grouped = {};
+    const msInDay = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    
+    // Initialize last 7 days to 0
+    for(let i=6; i>=0; i--) {
+      const d = new Date(now.getTime() - i * msInDay);
+      const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      grouped[dateStr] = 0;
+    }
+
+    orders.forEach(o => {
+      if (o.status === "cancelled") return;
+      const d = new Date(o.createdAt);
+      const diffDays = Math.floor((now - d) / msInDay);
+      if (diffDays <= 6) {
+         const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+         if (grouped[dateStr] !== undefined) {
+           grouped[dateStr] += (o.totalAmount || 0);
+         }
+      }
+    });
+
+    return Object.keys(grouped).map(date => ({
+      name: date,
+      Revenue: grouped[date]
+    }));
+  }, [orders]);
 
   const tabs = [
     { id: "overview",  icon: BarChart3,   label: "Overview"  },
     { id: "products",  icon: Package,     label: "Products"  },
     { id: "orders",    icon: ShoppingBag, label: "Orders"    },
-    { id: "browse",    icon: Store,       label: "Browse"    },
+    { id: "wallet",    icon: DollarSign,  label: "eAson Wallet"}
   ];
 
   if (!user?.verified) {
@@ -254,6 +362,12 @@ export default function WholesalerDashboard() {
                 <Icon className="w-4 h-4" /> {label}
               </button>
             ))}
+            <button
+              onClick={() => navigate("/marketplace")}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-gray-500 hover:bg-gray-50 hover:text-gray-900"
+            >
+              <Store className="w-4 h-4" /> Marketplace
+            </button>
           </nav>
           <div className="space-y-1 pt-5 border-t border-gray-100">
             <button onClick={() => navigate("/settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 rounded-xl transition">
@@ -285,6 +399,12 @@ export default function WholesalerDashboard() {
                 )}
               </button>
               <button
+                onClick={() => navigate("/marketplace")}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-black rounded-full text-sm font-semibold hover:bg-gray-50 transition"
+              >
+                <Store className="w-4 h-4" /> Browse Marketplace
+              </button>
+              <button
                 onClick={() => setModal({ mode: "add" })}
                 className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-semibold hover:bg-emerald-700 transition"
               >
@@ -301,6 +421,31 @@ export default function WholesalerDashboard() {
                 <StatCard icon={ShoppingBag} label="Orders"       value={orders.length}    color="indigo"  />
                 <StatCard icon={TrendingUp}  label="Total Stock"  value={totalStock}        color="amber"   />
                 <StatCard icon={AlertCircle} label="Pending"      value={pending}           color="rose"    />
+              </div>
+
+              {/* Revenue Chart */}
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                <h2 className="text-sm font-semibold text-gray-900 mb-6">Revenue Over Time (Last 7 Days)</h2>
+                <div className="w-full h-72">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} tickFormatter={(val) => `Rs${val}`} dx={-10} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value) => [`Rs ${value.toLocaleString()}`, "Revenue"]}
+                      />
+                      <Area type="monotone" dataKey="Revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               {/* Recent products */}
@@ -460,7 +605,7 @@ export default function WholesalerDashboard() {
                       }`}>{order.status}</span>
                     </div>
                     <p className="text-xs text-gray-400">
-                      {order.buyer?.firstName} {order.buyer?.lastName} · {order.items?.length} item(s)
+                      {order.user?.firstName} {order.user?.lastName} · {order.items?.length} item(s)
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       {new Date(order.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}
@@ -468,34 +613,90 @@ export default function WholesalerDashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-base font-bold text-gray-900">Rs {Number(order.total || order.totalAmount || 0).toLocaleString()}</p>
-                    <button
-                      onClick={() => toast("Chat coming soon — message buyers directly.")}
-                      className="mt-2 flex items-center gap-1.5 text-xs text-emerald-600 font-medium"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" /> Message buyer
-                    </button>
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                       { (order.status === "pending" || order.status === "processing") && (
+                         <button
+                           onClick={() => handleMarkAsSent(order._id)}
+                           className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-xs font-semibold hover:bg-gray-900 transition"
+                         >
+                           <Truck className="w-3.5 h-3.5" /> Mark Sent
+                         </button>
+                       )}
+                       { order.status === "delivered" && (
+                         <button
+                           onClick={() => generateInvoice(order, "wholesaler")}
+                           className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-semibold hover:bg-blue-100 border border-blue-100 transition"
+                         >
+                           <Download className="w-3.5 h-3.5" /> Invoice
+                         </button>
+                       )}
+                       <button
+                         onClick={() => {
+                           if (order.user?._id) {
+                             startChat({ wholesalerId: order.user._id, orderId: order._id });
+                           } else {
+                             toast.error("Buyer details missing");
+                           }
+                         }}
+                         className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 border border-emerald-100 transition"
+                       >
+                         <MessageCircle className="w-3.5 h-3.5" /> Message buyer
+                       </button>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* ── BROWSE ── */}
-          {activeTab === "browse" && (
-            <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center">
-              <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                <Store className="w-6 h-6 text-emerald-600" />
+
+          {/* ── WALLET ── */}
+          {activeTab === "wallet" && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-emerald-600 to-emerald-900 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl">
+                 <div className="absolute top-0 right-0 p-10 opacity-10">
+                   <DollarSign className="w-40 h-40" />
+                 </div>
+                 <div className="relative z-10">
+                   <p className="text-sm font-medium text-emerald-100 uppercase tracking-widest mb-1">Available Escrow Balance</p>
+                   <h2 className="text-5xl font-bold mb-6">Rs {Number(wallet?.balance || 0).toLocaleString()}</h2>
+                   <div className="flex gap-4">
+                     <button
+                       onClick={() => toast("Withdrawal initiated!")}
+                       className="px-6 py-3 bg-white text-emerald-900 rounded-xl font-bold shadow-sm hover:bg-gray-50 transition"
+                     >
+                       Withdraw to Bank
+                     </button>
+                     <button className="px-6 py-3 border border-emerald-400 text-white rounded-xl font-bold hover:bg-emerald-800 transition">
+                       View Escrow Activity
+                     </button>
+                   </div>
+                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Browse other wholesalers</h3>
-              <p className="text-sm text-gray-400 max-w-sm mx-auto mb-8 leading-relaxed">
-                As a wholesaler you can buy products listed by <strong>other wholesalers</strong> at special prices. Your own listings are excluded from your cart.
-              </p>
-              <button onClick={() => navigate("/marketplace")}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-900 transition">
-                Open Marketplace <ArrowRight className="w-4 h-4" />
-              </button>
+              
+              <div className="bg-white border border-gray-100 rounded-2xl p-6">
+                 <h3 className="text-lg font-bold text-gray-900 mb-4">Recent Transactions</h3>
+                 {wallet?.transactions?.length > 0 ? (
+                   <div className="space-y-4">
+                     {wallet.transactions.reverse().map((t, i) => (
+                       <div key={i} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0">
+                         <div>
+                           <p className="font-semibold text-gray-900">{t.description}</p>
+                           <p className="text-xs text-gray-400">{new Date(t.date).toLocaleString()}</p>
+                         </div>
+                         <div className={`font-bold ${t.type === 'credit' ? 'text-emerald-500' : 'text-gray-900'}`}>
+                           {t.type === 'credit' ? '+' : '-'} Rs {Math.abs(t.amount).toLocaleString()}
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 ) : (
+                   <p className="text-gray-400 text-sm">No transactions yet. Complete an order to receive escrow funds.</p>
+                 )}
+              </div>
             </div>
           )}
+
         </main>
       </div>
 

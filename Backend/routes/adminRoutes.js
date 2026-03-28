@@ -81,6 +81,44 @@ router.get("/analytics", async (req, res) => {
     const deliveredOrders = await Order.find({ status: "delivered" });
     const totalGMV = deliveredOrders.reduce((acc, order) => acc + order.totalAmount, 0);
 
+    // Fetch the 5 most recent orders for the activity table
+    const recentOrders = await Order.find()
+      .sort({ createdAt: -1 })
+      .limit(5);
+
+    // Fetch actual 7-day revenue data from real orders
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(today.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const weeklyOrders = await Order.find({
+      status: "delivered",
+      createdAt: { $gte: sevenDaysAgo, $lte: today }
+    });
+
+    const revenueByDay = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      // Format as "Mon", "Tue", etc.
+      revenueByDay[d.toLocaleDateString("en-US", { weekday: "short" })] = 0;
+    }
+
+    weeklyOrders.forEach(order => {
+      const day = new Date(order.createdAt).toLocaleDateString("en-US", { weekday: "short" });
+      if (revenueByDay[day] !== undefined) {
+        revenueByDay[day] += (order.grandTotal || order.totalAmount || 0);
+      }
+    });
+
+    const revenueData = Object.keys(revenueByDay).map(date => ({
+      date,
+      revenue: revenueByDay[date]
+    }));
+
     res.json({
       users: {
         total: totalUsers,
@@ -89,8 +127,58 @@ router.get("/analytics", async (req, res) => {
       },
       orders: totalOrders,
       products: totalProducts,
-      gmv: totalGMV
+      gmv: totalGMV,
+      recentOrders,
+      revenueData
     });
+  } catch (err) {
+    console.error("Analytics Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all users
+router.get("/users", async (req, res) => {
+  try {
+    const users = await User.find().select("-password").sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update user role
+router.put("/users/:id/role", async (req, res) => {
+  try {
+    const { role } = req.body;
+    if (!["retailer", "wholesaler", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    // Prevent self-demotion or modifying super-admins if needed, but this MVP allows total control
+    if (user._id.toString() === req.user.id && role !== "admin") {
+      return res.status(400).json({ message: "Cannot remove your own admin status" });
+    }
+
+    user.role = role;
+    await user.save();
+    
+    res.json({ message: "Role updated", user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Delete user
+router.delete("/users/:id", async (req, res) => {
+  try {
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ message: "Cannot delete yourself" });
+    }
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "User deleted" });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
