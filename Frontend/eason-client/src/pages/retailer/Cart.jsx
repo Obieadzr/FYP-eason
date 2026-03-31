@@ -192,7 +192,18 @@ export default function Cart() {
   const { user }   = useAuthStore();
 
   const [step, setStep]             = useState(1);
-  const [shippingInfo, setShippingInfo] = useState({ address: "", phone: "", notes: "" });
+  const [shippingInfo, setShippingInfo] = useState(() => {
+    try {
+      const saved = localStorage.getItem("eason_shippingInfo");
+      return saved ? JSON.parse(saved) : { address: "", phone: "", notes: "" };
+    } catch {
+      return { address: "", phone: "", notes: "" };
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("eason_shippingInfo", JSON.stringify(shippingInfo));
+  }, [shippingInfo]);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading]           = useState(true);

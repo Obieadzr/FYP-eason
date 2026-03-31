@@ -146,7 +146,7 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
     }
 
     // Escrow System: Payout to Wholesaler when Delivered
-    if (status === "delivered" && order.paymentStatus !== "paid") {
+    if (status === "delivered") {
       try {
         // Find wholesaler from the first item
         const firstItem = order.items && order.items[0];
@@ -158,20 +158,27 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
             wallet = new Wallet({ user: wholesalerId, balance: 0, totalEarned: 0, transactions: [] });
           }
           
-          wallet.balance += order.wholesalerPayout;
-          wallet.totalEarned += order.wholesalerPayout;
-          wallet.transactions.push({
-            orderId: order._id,
-            amount: order.wholesalerPayout,
-            type: "credit",
-            status: "completed",
-            description: `Escrow payout for order #${order._id.toString().slice(-8).toUpperCase()}`
-          });
-          
-          await wallet.save();
-          order.paymentStatus = "paid"; // Mark as paid out
-          await order.save();
-          console.log(`Escrow payout of Rs ${order.wholesalerPayout} sent to Wholesaler ${wholesalerId}`);
+          const alreadyPaid = wallet.transactions.some(
+            (t) => t.orderId && t.orderId.toString() === order._id.toString() && t.type === "credit"
+          );
+
+          if (!alreadyPaid) {
+            const payoutAmount = order.wholesalerPayout || order.grandTotal || 0;
+            wallet.balance += payoutAmount;
+            wallet.totalEarned += payoutAmount;
+            wallet.transactions.push({
+              orderId: order._id,
+              amount: payoutAmount,
+              type: "credit",
+              status: "completed",
+              description: `Escrow payout for order #${order._id.toString().slice(-8).toUpperCase()}`
+            });
+            
+            await wallet.save();
+            order.paymentStatus = "paid"; // Mark order as paid completely
+            await order.save();
+            console.log(`Escrow payout of Rs ${payoutAmount} sent to Wholesaler ${wholesalerId}`);
+          }
         }
       } catch (escrowErr) {
         console.error("Escrow payout failed critically:", escrowErr);

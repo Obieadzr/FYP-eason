@@ -15,6 +15,7 @@ import {
   User,
   Eye,
   Minus,
+  Trash2,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../../utils/api";
@@ -48,6 +49,12 @@ export default function Marketplace() {
     try { return JSON.parse(localStorage.getItem("eason_wishlist")) || []; }
     catch { return []; }
   });
+  const [compareList, setCompareList] = useState([]);
+  const [recentlyViewed, setRecentlyViewed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("eason_recent")) || []; }
+    catch { return []; }
+  });
+  const [showCompareModal, setShowCompareModal] = useState(false);
   const [quickView, setQuickView] = useState(null);
   const [qvQty, setQvQty] = useState(1);
   const searchRef = useRef(null);
@@ -138,6 +145,29 @@ export default function Marketplace() {
     }).then(r => {
       if (r.isConfirmed) { logout(); navigate("/", { replace: true }); }
     });
+  };
+
+  const handleProductClick = (product) => {
+    let recent = [...recentlyViewed];
+    recent = recent.filter(p => p._id !== product._id);
+    recent.unshift(product);
+    recent = recent.slice(0, 5);
+    localStorage.setItem("eason_recent", JSON.stringify(recent));
+    setRecentlyViewed(recent);
+    navigate(`/marketplace/product/${product._id}`);
+  };
+
+  const toggleCompare = (e, product) => {
+    e.stopPropagation();
+    if (compareList.find(c => c._id === product._id)) {
+      setCompareList(prev => prev.filter(c => c._id !== product._id));
+    } else {
+      if (compareList.length >= 3) {
+        toast.error("You can compare up to 3 products");
+        return;
+      }
+      setCompareList(prev => [...prev, product]);
+    }
   };
 
   const requireAuth = (cb) => {
@@ -560,6 +590,26 @@ export default function Marketplace() {
             )}
           </AnimatePresence>
 
+          {/* RECENTLY VIEWED STRIP */}
+          {recentlyViewed.length > 0 && searchQuery === "" && selectedCategory === "All" && (
+            <div className="mb-12">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Eye className="w-5 h-5 text-emerald-500" /> Recently Viewed
+              </h2>
+              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                {recentlyViewed.map((rp, i) => (
+                  <div key={i} onClick={() => handleProductClick(rp)} className="w-40 shrink-0 cursor-pointer group hover:bg-gray-50 p-2 rounded-xl transition">
+                    <div className="aspect-square bg-[#f5f5f5] rounded-xl overflow-hidden mb-2">
+                      {rp.image ? <img src={`http://localhost:5000${rp.image}`} alt={rp.name} className="w-full h-full object-contain p-2" /> : <Package className="w-8 h-8 text-gray-300 mx-auto mt-6" />}
+                    </div>
+                    <p className="text-xs font-semibold text-gray-900 line-clamp-1">{rp.name}</p>
+                    <p className="text-xs font-bold text-emerald-600 mt-0.5">Rs {Number(getDisplayPrice(rp)).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Products grid — Nike style */}
           {filteredProducts.length === 0 ? (
             <div className="py-32 flex flex-col items-center justify-center text-center">
@@ -599,7 +649,7 @@ export default function Marketplace() {
                     {/* Image */}
                     <div
                       className="relative aspect-square bg-[#f5f5f5] overflow-hidden mb-4"
-                      onClick={() => navigate(`/marketplace/product/${product._id}`)}
+                      onClick={() => handleProductClick(product)}
                     >
                       {product.image ? (
                         <img
@@ -642,11 +692,23 @@ export default function Marketplace() {
                       {/* Wishlist */}
                       <button
                         onClick={e => { e.stopPropagation(); toggleWishlist(product._id); }}
-                        className={`absolute top-3 right-3 p-2 transition ${
+                        className={`absolute top-3 right-3 p-2 transition rounded-md ${
                           inWishlist ? "bg-black text-white" : "bg-white/80 text-gray-500 opacity-0 group-hover:opacity-100"
                         }`}
+                        title="Wishlist"
                       >
                         <Heart className={`w-3.5 h-3.5 ${inWishlist ? "fill-white" : ""}`} />
+                      </button>
+
+                      {/* Compare toggle */}
+                      <button
+                        onClick={e => toggleCompare(e, product)}
+                        className={`absolute top-12 right-3 p-2 transition rounded-md ${
+                          compareList.find(c => c._id === product._id) ? "bg-emerald-600 text-white" : "bg-white/80 text-gray-500 opacity-0 group-hover:opacity-100"
+                        }`}
+                        title="Compare"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" />
                       </button>
 
                       {/* Quick View button — center on hover */}
@@ -682,7 +744,7 @@ export default function Marketplace() {
                     </div>
 
                     {/* Info */}
-                    <div onClick={() => !isOutOfStock && navigate(`/marketplace/product/${product._id}`)}>
+                    <div onClick={() => !isOutOfStock && handleProductClick(product)}>
                       <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-1">
                         {product.category?.name || "General"}
                       </p>
@@ -895,6 +957,125 @@ export default function Marketplace() {
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* COMPARE BAR & MODAL */}
+      <AnimatePresence>
+        {compareList.length > 0 && !showCompareModal && (
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-50 p-4"
+          >
+            <div className="max-w-screen-xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <span className="font-bold text-gray-900 border-r border-gray-200 pr-4">Compare Products</span>
+                <div className="flex gap-2">
+                  {compareList.map(c => (
+                    <div key={c._id} className="w-12 h-12 bg-gray-50 rounded border border-gray-200 p-1 relative group">
+                      <button onClick={() => setCompareList(prev => prev.filter(x => x._id !== c._id))} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition shadow">
+                        <X className="w-3 h-3" />
+                      </button>
+                      {c.image ? <img src={`http://localhost:5000${c.image}`} className="w-full h-full object-contain" /> : <Package className="w-full h-full text-gray-300" />}
+                    </div>
+                  ))}
+                  {Array.from({ length: Math.max(0, 3 - compareList.length) }).map((_, i) => (
+                    <div key={`empty-${i}`} className="w-12 h-12 border-2 border-dashed border-gray-200 rounded flex items-center justify-center text-gray-300">
+                      <Plus className="w-4 h-4" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <button onClick={() => setCompareList([])} className="text-sm font-semibold text-gray-500 hover:text-black">Clear All</button>
+                <button 
+                  onClick={() => setShowCompareModal(true)} 
+                  disabled={compareList.length < 2}
+                  className="px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition"
+                >
+                  Compare ({compareList.length})
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showCompareModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-auto relative p-8 shadow-2xl"
+            >
+              <button onClick={() => setShowCompareModal(false)} className="absolute top-6 right-6 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition">
+                <X className="w-5 h-5 text-black" />
+              </button>
+              <h2 className="text-2xl font-black text-black uppercase mb-8 tracking-wide">Product Comparison</h2>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left table-fixed">
+                  <thead>
+                    <tr>
+                      <th className="w-48 p-4 font-semibold text-gray-500 border-b border-gray-200">Features</th>
+                      {compareList.map(c => (
+                        <th key={c._id} className="p-4 border-b border-gray-200 relative align-top">
+                          <button onClick={() => {
+                            setCompareList(prev => prev.filter(x => x._id !== c._id));
+                            if (compareList.length <= 2) setShowCompareModal(false);
+                          }} className="absolute top-4 right-4 p-1 text-gray-400 hover:text-red-500 transition">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                          <div className="h-32 mb-4 bg-gray-50 flex items-center justify-center overflow-hidden rounded">
+                            {c.image ? <img src={`http://localhost:5000${c.image}`} className="h-full object-contain p-2" /> : <Package className="w-10 h-10 text-gray-300" />}
+                          </div>
+                          <h3 className="font-bold text-black text-lg truncate" title={c.name}>{c.name}</h3>
+                          <p className="text-emerald-600 font-bold mt-1 tracking-wide">Rs {Number(getDisplayPrice(c)).toLocaleString()}</p>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    <tr>
+                      <td className="p-4 font-semibold text-sm text-gray-600">Category</td>
+                      {compareList.map(c => <td key={c._id} className="p-4 text-sm font-medium">{c.category?.name || "-"}</td>)}
+                    </tr>
+                    <tr>
+                      <td className="p-4 font-semibold text-sm text-gray-600">Availability</td>
+                      {compareList.map(c => <td key={c._id} className="p-4 text-sm font-medium">
+                        {c.stock > 10 ? <span className="text-emerald-600">In Stock ({c.stock})</span> : c.stock > 0 ? <span className="text-amber-600">Low Stock ({c.stock})</span> : <span className="text-red-600">Out of Stock</span>}
+                      </td>)}
+                    </tr>
+                    <tr>
+                      <td className="p-4 font-semibold text-sm text-gray-600 align-top">Description</td>
+                      {compareList.map(c => <td key={c._id} className="p-4 text-xs leading-relaxed text-gray-500 whitespace-pre-wrap">{c.description || "-"}</td>)}
+                    </tr>
+                    <tr>
+                      <td className="p-4 font-semibold text-sm text-gray-600">Action</td>
+                      {compareList.map(c => <td key={c._id} className="p-4">
+                        <button 
+                          onClick={() => { requireAuth(() => { addToCart(c); }); toast.success("Added to cart"); }}
+                          disabled={c.stock === 0}
+                          className="w-full py-2 bg-black text-white font-bold uppercase tracking-widest text-xs hover:bg-gray-800 transition disabled:opacity-50"
+                        >
+                          Add to Cart
+                        </button>
+                      </td>)}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </>
   );

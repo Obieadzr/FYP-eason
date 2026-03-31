@@ -169,6 +169,7 @@ export const getProducts = async (req, res) => {
     const products = await Product.find()
       .populate("category", "name")
       .populate("unit", "name")
+      .populate("wholesaler", "firstName lastName companyName verified email")
       .sort({ createdAt: -1 });
 
     const prepared = products.map((product) => ({
@@ -206,7 +207,8 @@ export const getProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id)
       .populate("category", "name")
-      .populate("unit", "name");
+      .populate("unit", "name")
+      .populate("wholesaler", "firstName lastName companyName verified email");
 
     if (!product) return res.status(404).json({ message: "Product not found" });
 

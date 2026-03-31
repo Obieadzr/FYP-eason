@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Package, TrendingUp, Settings,
   LogOut, CheckCircle2, Boxes, AlertTriangle, ShoppingBag,
-  Search, Plus, Edit3, Trash2, Loader2, Download, MessageCircle
+  Search, Plus, Edit3, Trash2, Loader2, Download, MessageCircle,
+  Image, DollarSign, Clock, Store, Truck, X, XCircle
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import API from "../../utils/api";
@@ -34,6 +35,199 @@ function StatCard({ icon: Icon, label, value, alert }) {
   );
 }
 
+/* ─── Edit/Add Product Modal ──────────────────────────────────────────── */
+function ProductModal({ product, categories, onClose, onSave }) {
+  const isEdit = !!product?._id;
+  const [form, setForm] = useState({
+    name:        product?.name        || "",
+    description: product?.description || "",
+    price:       product?.price       || product?.wholesalerPrice || "",
+    stock:       product?.stock       || "",
+    category:    product?.category?._id || product?.category || "",
+    image:       null,
+    bulkPricing: product?.bulkPricing || [],
+  });
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(
+    product?.image ? `http://localhost:5000${product.image}` : null
+  );
+
+  const handleFile = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setForm({ ...form, image: file });
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => { 
+        if (v !== null && v !== "") {
+          if (k === "bulkPricing") {
+             fd.append(k, JSON.stringify(v));
+          } else {
+             fd.append(k, v);
+          }
+        } 
+      });
+      if (isEdit) {
+        await API.put(`/products/${product._id}`, fd);
+        toast.success("Product updated!");
+      } else {
+        await API.post("/products", fd);
+        toast.success("Product added!");
+      }
+      onSave();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputCls = "w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="bg-white rounded-3xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl"
+        style={FONT}
+      >
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-3xl z-10">
+          <h2 className="text-base font-semibold text-gray-900">{isEdit ? "Edit Product" : "Add New Product"}</h2>
+          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-black rounded-lg hover:bg-gray-100 transition">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+          {/* Image upload */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Product Image</label>
+            <label className="block cursor-pointer">
+              <div className={`h-40 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden transition ${preview ? "border-transparent" : "border-gray-200 hover:border-emerald-400"}`}>
+                {preview
+                  ? <img src={preview} alt="preview" className="w-full h-full object-contain p-2" />
+                  : <div className="text-center">
+                      <Image className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-xs text-gray-400">Click to upload image</p>
+                    </div>
+                }
+              </div>
+              <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+            </label>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Product Name *</label>
+            <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. Surf Excel 4L" className={inputCls} />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Description</label>
+            <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} placeholder="Short product description..." className={`${inputCls} resize-none`} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Price (Rs) *</label>
+              <input required type="number" min="0" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="2500" className={inputCls} />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Stock *</label>
+              <input required type="number" min="0" value={form.stock} onChange={e => setForm({ ...form, stock: e.target.value })} placeholder="100" className={inputCls} />
+            </div>
+          </div>
+
+          {categories.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Category</label>
+              <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className={inputCls}>
+                <option value="">Select category</option>
+                {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Tiered Pricing Section */}
+          <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50/50">
+            <div className="flex items-center justify-between mb-3">
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Bulk Pricing Tiers (Optional)</label>
+              <button 
+                type="button" 
+                onClick={() => setForm({ ...form, bulkPricing: [...form.bulkPricing, { minQuantity: "", pricePerUnit: "" }] })}
+                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add Tier
+              </button>
+            </div>
+            {form.bulkPricing.map((tier, index) => (
+              <div key={index} className="flex gap-3 mb-3 items-center">
+                <input 
+                  type="number" 
+                  min="2" 
+                  placeholder="Min Qty (e.g. 100)" 
+                  value={tier.minQuantity} 
+                  onChange={e => {
+                    const newTiers = [...form.bulkPricing];
+                    newTiers[index].minQuantity = Number(e.target.value);
+                    setForm({ ...form, bulkPricing: newTiers });
+                  }} 
+                  className={inputCls} 
+                />
+                <input 
+                  type="number" 
+                  placeholder="Price (e.g. 2300)" 
+                  value={tier.pricePerUnit} 
+                  onChange={e => {
+                    const newTiers = [...form.bulkPricing];
+                    newTiers[index].pricePerUnit = Number(e.target.value);
+                    setForm({ ...form, bulkPricing: newTiers });
+                  }} 
+                  className={inputCls} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setForm({ ...form, bulkPricing: form.bulkPricing.filter((_, i) => i !== index) })}
+                  className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {form.bulkPricing.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-2">No bulk tiers set. Click 'Add Tier' to set volume discounts.</p>
+            )}
+          </div>
+
+          <motion.button
+            type="submit"
+            disabled={loading}
+            whileTap={{ scale: 0.98 }}
+            className="w-full py-4 bg-emerald-600 text-white text-sm font-semibold rounded-xl hover:bg-emerald-700 disabled:opacity-60 transition flex items-center justify-center gap-2"
+          >
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {loading ? "Saving..." : isEdit ? "Update Product" : "Add Product"}
+          </motion.button>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
@@ -42,9 +236,13 @@ export default function Profile() {
 
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [wallet, setWallet] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [modal, setModal] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const { addToCart } = useCart();
   const { startChat } = useChat();
 
@@ -52,8 +250,15 @@ export default function Profile() {
     if (!user) { navigate("/login"); return; }
     const load = async () => {
       try {
-        const orderRes = await API.get(isWholesaler ? "/orders/wholesaler" : "/orders/my-orders").catch(() => ({ data: [] }));
+        const [orderRes, catRes, walletRes] = await Promise.all([
+          API.get(isWholesaler ? "/orders/wholesaler" : "/orders/my-orders").catch(() => ({ data: [] })),
+          API.get("/categories").catch(() => ({ data: [] })),
+          API.get("/payment/wallet").catch(() => ({ data: { wallet: null } }))
+        ]);
         setOrders(orderRes.data?.orders || orderRes.data || []);
+        setCategories(catRes.data || []);
+        setWallet(walletRes.data?.wallet || null);
+        
         if (isWholesaler) {
           const prodRes = await API.get("/products/my").catch(() => ({ data: [] }));
           setProducts(prodRes.data.products || prodRes.data || []);
@@ -78,6 +283,27 @@ export default function Profile() {
     finally { setDeleting(null); }
   };
 
+  const handleMarkAsSent = async (id) => {
+    try {
+      await API.put(`/orders/${id}/status`, { status: "shipped" });
+      setOrders(prev => prev.map(o => o._id === id ? { ...o, status: "shipped" } : o));
+      toast.success("Order marked as sent!");
+    } catch {
+      toast.error("Failed to update status.");
+    }
+  };
+
+  const handleCancelOrder = async (id) => {
+    if (!window.confirm("Are you sure you want to cancel this order?")) return;
+    try {
+      await API.put(`/orders/${id}/status`, { status: "cancelled" });
+      setOrders(prev => prev.map(o => o._id === id ? { ...o, status: "cancelled" } : o));
+      toast.success("Order cancelled successfully");
+    } catch {
+      toast.error("Failed to cancel order.");
+    }
+  };
+
   const handleReorder = (order) => {
     let successCount = 0;
     order.items?.forEach(item => {
@@ -97,6 +323,7 @@ export default function Profile() {
         { id: "overview", label: "Overview", icon: LayoutDashboard },
         { id: "products", label: "Products", icon: Package },
         { id: "orders", label: "Sales", icon: TrendingUp },
+        { id: "wallet", label: "eAson Wallet", icon: DollarSign },
         { id: "settings", label: "Settings", icon: Settings }
       ]
     : [
@@ -139,6 +366,23 @@ export default function Profile() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent flex rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (isWholesaler && !user?.verified) {
+    return (
+      <div className="min-h-screen bg-[#f9f9f9] flex items-center justify-center" style={FONT}>
+        <div className="max-w-sm text-center p-8">
+          <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+            <Clock className="w-6 h-6 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Awaiting verification</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">Your wholesaler account is being reviewed. Usually takes 24–48 hours.</p>
+          <button onClick={() => navigate("/marketplace")} className="mt-7 px-7 py-3.5 bg-black text-white rounded-full text-sm font-semibold hover:bg-gray-900 transition flex items-center justify-center mx-auto gap-2">
+            <Store className="w-4 h-4" /> Browse Marketplace
+          </button>
+        </div>
       </div>
     );
   }
@@ -219,6 +463,23 @@ export default function Profile() {
                 <div className="space-y-8">
                   <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
                   
+                  {lowStockItems > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shrink-0">
+                          <AlertTriangle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-amber-900">Smart Restock Alert</h3>
+                          <p className="text-sm text-amber-700">You have {lowStockItems} product(s) running low on stock. Consider restocking soon to avoid losing sales.</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setTab("products")} className="px-5 py-2.5 bg-amber-600 text-white text-sm font-bold rounded-xl hover:bg-amber-700 transition whitespace-nowrap">
+                        Review Stock
+                      </button>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <StatCard icon={Package} label="Total Products" value={products.length} />
                     <StatCard icon={Boxes} label="Total Stock" value={totalStock} />
@@ -298,7 +559,7 @@ export default function Profile() {
                         />
                       </div>
                       <button
-                        onClick={() => navigate("/add-product")}
+                        onClick={() => setModal({ mode: "add" })}
                         className="bg-emerald-600 text-white px-5 py-2.5 text-sm font-semibold rounded-xl hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm shadow-emerald-200 shrink-0"
                       >
                         <Plus className="w-4 h-4" /> Add Product
@@ -314,7 +575,7 @@ export default function Profile() {
                       <h2 className="text-2xl font-bold text-gray-900">No products yet</h2>
                       <p className="text-gray-500 max-w-xs mx-auto mt-2">Add your first product and start selling to retailers across Kathmandu</p>
                       <button
-                        onClick={() => navigate("/add-product")}
+                        onClick={() => setModal({ mode: "add" })}
                         className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-semibold hover:bg-emerald-700 mt-8 flex items-center gap-2 transition shadow-lg shadow-emerald-200"
                       >
                         <Plus className="w-5 h-5" /> Add Your First Product
@@ -363,7 +624,7 @@ export default function Profile() {
                                 <td className="py-4 px-6 text-right">
                                   <div className="flex items-center justify-end gap-2">
                                     <button
-                                      onClick={() => navigate(`/add-product?edit=${p._id}`)}
+                                      onClick={() => setModal({ mode: "edit", product: p })}
                                       className="p-2 text-gray-400 hover:text-emerald-600 transition rounded-lg hover:bg-emerald-50"
                                       title="Edit Product"
                                     >
@@ -421,7 +682,7 @@ export default function Profile() {
                               <tr key={o._id} className="hover:bg-gray-50 transition">
                                 <td 
                                   className="py-4 px-6 font-medium text-gray-900 cursor-pointer" 
-                                  onClick={() => navigate(isWholesaler ? `/orders/kanban` : `/order-success?orderId=${o._id}&total=${o.totalAmount || o.total || 0}`)}
+                                  onClick={() => setSelectedOrder(o)}
                                 >
                                   #{o._id?.slice(-8).toUpperCase()}
                                 </td>
@@ -431,6 +692,16 @@ export default function Profile() {
                                 <td className="py-4 px-6">{getStatusBadge(o.status)}</td>
                                 <td className="py-4 px-6 text-right">
                                   <div className="flex items-center justify-end gap-2">
+                                    {isWholesaler && (o.status === "pending" || o.status === "processing") && (
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleMarkAsSent(o._id); }}
+                                        title="Mark Sent"
+                                        className="p-2 text-black hover:bg-gray-100 rounded-lg transition"
+                                      >
+                                        <Truck className="w-4 h-4" />
+                                      </button>
+                                    )}
+
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -475,6 +746,62 @@ export default function Profile() {
                       </div>
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ENTIRE WALLET TAB RENDERING ADDED BELOW ORDERS */}
+              {tab === "wallet" && isWholesaler && (
+                <div className="space-y-6">
+                  <h1 className="text-2xl font-bold text-gray-900">eAson Wallet</h1>
+                  <div className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 rounded-3xl p-8 lg:p-10 text-white relative overflow-hidden shadow-xl shadow-emerald-900/10">
+                    <div className="absolute -top-10 -right-10 p-10 opacity-10">
+                      <DollarSign className="w-64 h-64" />
+                    </div>
+                    <div className="relative z-10">
+                      <p className="text-sm font-medium text-emerald-100 uppercase tracking-widest mb-2 flex items-center gap-2"><DollarSign className="w-4 h-4" /> Available Balance</p>
+                      <h2 className="text-5xl lg:text-6xl font-bold mb-8">Rs {Number(wallet?.balance || 0).toLocaleString()}</h2>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        <button
+                          onClick={() => toast.success("Withdrawal request submitted!")}
+                          className="px-8 py-3.5 bg-white text-emerald-900 rounded-xl font-bold shadow-sm hover:bg-emerald-50 transition"
+                        >
+                          Withdraw to Bank
+                        </button>
+                        <button className="px-8 py-3.5 border border-emerald-400/50 text-white rounded-xl font-bold hover:bg-emerald-800/50 transition">
+                          View Escrow Activity
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Recent Transactions</h3>
+                    {wallet?.transactions?.length > 0 ? (
+                      <div className="space-y-4">
+                        {wallet.transactions.slice().reverse().map((t, i) => (
+                          <div key={i} className="flex justify-between items-center py-4 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 px-2 rounded-xl transition">
+                            <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'credit' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                                {t.type === 'credit' ? <TrendingUp className="w-5 h-5" /> : <DollarSign className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">{t.description}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">{new Date(t.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                              </div>
+                            </div>
+                            <div className={`font-bold text-lg ${t.type === 'credit' ? 'text-emerald-500' : 'text-gray-900'}`}>
+                              {t.type === 'credit' ? '+' : '-'} Rs {Math.abs(t.amount).toLocaleString()}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-12">
+                        <DollarSign className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">No transactions yet. Complete an order to receive escrow funds.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -537,6 +864,114 @@ export default function Profile() {
           </AnimatePresence>
         </main>
       </div>
+
+      <AnimatePresence>
+        {modal && (
+          <ProductModal
+            product={modal.product}
+            categories={categories}
+            onClose={() => setModal(null)}
+            onSave={() => { setModal(null); window.location.reload(); }}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedOrder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && setSelectedOrder(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8 relative"
+            >
+              <button onClick={() => setSelectedOrder(null)} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black rounded-xl hover:bg-gray-100 transition">
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
+              <p className="text-sm text-gray-500 mb-6 font-medium tracking-wide">#{selectedOrder._id?.slice(-8).toUpperCase()}</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Order Status</p>
+                  <p className="font-bold text-gray-900 capitalize flex items-center gap-2">
+                    {getStatusBadge(selectedOrder.status)}
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Payment Info</p>
+                  <p className="font-bold text-gray-900 uppercase">
+                    {selectedOrder.paymentMethod || "COD"} <span className="text-gray-400 mx-2">•</span> <span className={selectedOrder.paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}>{selectedOrder.paymentStatus}</span>
+                  </p>
+                </div>
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Customer Details</p>
+                  <p className="font-bold text-gray-900 text-sm mb-1">{selectedOrder.user?.firstName || "Customer"} {selectedOrder.user?.lastName || ""}</p>
+                  <p className="text-sm text-gray-600 truncate">{selectedOrder.shippingAddress}</p>
+                  <p className="text-sm text-gray-600 mt-1">{selectedOrder.phone}</p>
+                </div>
+                <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100 md:col-span-1">
+                  <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Order Notes</p>
+                  <p className="text-sm text-gray-800 italic">{selectedOrder.notes || "No special instructions provided."}</p>
+                </div>
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-900 mb-4 border-b border-gray-100 pb-3">Products ({selectedOrder.items?.length || 0})</h3>
+              <div className="space-y-3 mb-8">
+                {selectedOrder.items?.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-4 bg-white border border-gray-100 p-4 rounded-2xl shadow-sm hover:border-gray-200 transition">
+                    <div className="w-16 h-16 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 border border-gray-100">
+                      {item.product?.image ? (
+                        <img src={`http://localhost:5000${item.product.image}`} alt={item.product?.name} className="w-full h-full object-contain p-2" />
+                      ) : (
+                        <Package className="w-6 h-6 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-gray-900 truncate">{item.product?.name || "Unknown Product"}</p>
+                      <p className="text-sm font-medium text-gray-500 mt-0.5">Quantity: <span className="text-gray-900">{item.quantity}</span></p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-bold text-gray-900">Rs {Number(item.pricePerUnit || 0).toLocaleString()}</p>
+                      <p className="text-[11px] font-bold text-gray-400 mt-1">TOTAL: Rs {(item.quantity * (item.pricePerUnit || 0)).toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between pt-6 border-t-2 border-dashed border-gray-100">
+                <p className="text-lg text-gray-500 font-bold uppercase tracking-wider">Grand Total</p>
+                <p className="text-3xl font-black text-emerald-600 drop-shadow-sm">Rs {Number(selectedOrder.grandTotal || selectedOrder.totalAmount || 0).toLocaleString()}</p>
+              </div>
+              
+              <div className="mt-8 flex gap-3 justify-end flex-wrap">
+                {(selectedOrder.status === "pending" || selectedOrder.status === "processing") && (
+                  <button onClick={() => { handleCancelOrder(selectedOrder._id); setSelectedOrder(null); }} className="px-6 py-3 bg-white border-2 border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-50 hover:border-red-200 transition flex items-center gap-2">
+                    <XCircle className="w-4 h-4" /> Cancel Order
+                  </button>
+                )}
+
+                {isWholesaler && (selectedOrder.status === "pending" || selectedOrder.status === "processing") && (
+                  <button onClick={() => { handleMarkAsSent(selectedOrder._id); setSelectedOrder(null); }} className="px-6 py-3 bg-black text-white font-bold rounded-xl hover:bg-gray-900 transition flex items-center gap-2">
+                    <Truck className="w-4 h-4" /> Mark as Sent
+                  </button>
+                )}
+                
+                {!isWholesaler && (selectedOrder.status === "delivered" || selectedOrder.status === "cancelled") && (
+                  <button onClick={() => { handleReorder(selectedOrder); setSelectedOrder(null); }} className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-900 font-bold rounded-xl hover:bg-gray-50 transition flex items-center gap-2">
+                    <Package className="w-4 h-4" /> Reorder Items
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

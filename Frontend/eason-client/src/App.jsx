@@ -19,7 +19,6 @@ import PaymentSuccess from "./pages/retailer/PaymentSuccess.jsx";
 import OrderKanban from "./pages/orders/OrderKanban.jsx";
 import Profile from "./pages/auth/Profile.jsx";
 import Settings from "./pages/auth/Settings.jsx";
-import WholesalerDashboard from "./pages/wholesaler/WholesalerDashboard.jsx";
 import Messages from "./pages/chat/Messages.jsx";
 
 // New Public Static Pages
@@ -35,6 +34,7 @@ import Privacy from "./pages/public/Privacy.jsx";
 import Terms from "./pages/public/Terms.jsx";
 import Press from "./pages/public/Press.jsx";
 import Sitemap from "./pages/public/Sitemap.jsx";
+import WholesalerStorefront from "./pages/public/WholesalerStorefront.jsx";
 
 // Wholesaler/Admin shared
 import AddProduct from "./pages/wholesaler/AddProduct.jsx";
@@ -114,6 +114,7 @@ function App() {
         <Route path="/pending-approval" element={<PendingApproval />} />
         <Route path="/order-success" element={<OrderSuccess />} />
         <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/supplier/:id" element={<WholesalerStorefront />} />
 
         {/* Generic Protected Pages */}
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
@@ -215,14 +216,6 @@ function App() {
           element={
             <ProtectedRoute>
               <Settings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/wholesaler"
-          element={
-            <ProtectedRoute allowedRoles={["wholesaler", "admin"]}>
-              <WholesalerDashboard />
             </ProtectedRoute>
           }
         />

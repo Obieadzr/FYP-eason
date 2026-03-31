@@ -384,14 +384,25 @@ export default function ProductDetail() {
 
             {/* Bulk pricing tiers */}
             {product.bulkPricing?.length > 0 && (
-              <div className="bg-gray-50 rounded-2xl p-4 space-y-2 border border-gray-100">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">Bulk Pricing</p>
-                {product.bulkPricing.map((tier, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Buy <strong className="text-gray-900">{tier.minQuantity}+</strong></span>
-                    <span className="font-semibold text-emerald-600">Rs {tier.pricePerUnit} / unit</span>
-                  </div>
-                ))}
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 space-y-3 border border-emerald-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500 rounded-full blur-3xl opacity-10"></div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-emerald-800 mb-2 flex items-center gap-2">
+                  <Package className="w-4 h-4" /> Volume Discounts
+                </p>
+                {product.bulkPricing.map((tier, i) => {
+                  const isBestDeal = i === product.bulkPricing.length - 1;
+                  return (
+                    <div key={i} className="flex flex-wrap justify-between items-center text-sm bg-white/60 p-3 rounded-xl border border-white relative z-10 transition hover:bg-white hover:shadow-sm cursor-default">
+                      <span className="text-gray-700 font-medium">Buy <strong className="text-emerald-700 font-black">{tier.minQuantity}+</strong> units</span>
+                      <div className="text-right flex items-center gap-2">
+                        <span className="font-black text-emerald-600">
+                          Rs {tier.pricePerUnit.toLocaleString()} / unit
+                        </span>
+                        {isBestDeal && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-md font-black shadow-sm flex items-center gap-1 animate-pulse">🔥 BEST DEAL</span>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
@@ -506,12 +517,14 @@ export default function ProductDetail() {
                 )}
 
                 {/* Negotiate */}
-                <ChatButton 
-                  wholesalerId={product.seller?._id} 
-                  productId={product._id} 
-                  label="Negotiate Price"
-                  className="w-full justify-center py-4 rounded-full text-sm bg-transparent border-dashed border-2 border-gray-300 text-gray-900 font-bold hover:border-gray-900 hover:bg-white" 
-                />
+                {product.wholesaler?._id && (
+                  <ChatButton 
+                    wholesalerId={product.wholesaler._id} 
+                    productId={product._id} 
+                    label="Make an Offer / Request Quote"
+                    className="w-full justify-center py-4 rounded-full text-sm bg-transparent border-dashed border-2 border-emerald-500 text-emerald-700 font-bold hover:bg-emerald-50 transition flex items-center gap-2" 
+                  />
+                )}
               </div>
             )}
 
@@ -539,8 +552,8 @@ export default function ProductDetail() {
               </Accordion>
 
               <Accordion icon={MapPin} title="Manufacturer & Origin">
-                <p><strong>Supplier:</strong> {product.seller?.businessName || product.seller?.firstName || "eAson Verified Supplier"}</p>
-                <p><strong>Location:</strong> {product.seller?.address || "Kathmandu, Nepal"}</p>
+                <p><strong>Supplier:</strong> {product.wholesaler?.companyName || product.wholesaler?.firstName || "eAson Verified Supplier"}</p>
+                <p><strong>Location:</strong> Kathmandu, Nepal</p>
                 <p><strong>Category:</strong> {product.category?.name || "General Merchandise"}</p>
                 <p><strong>SKU:</strong> #{product._id?.slice(-8).toUpperCase()}</p>
               </Accordion>
@@ -606,34 +619,40 @@ export default function ProductDetail() {
         {/* ── Vendor Card ── */}
         <section className="mt-14 border-t border-gray-100 pt-10">
           <h2 className="text-xl font-semibold text-gray-900 mb-8">Sold by</h2>
-          <div className="flex items-start gap-6 p-6 bg-[#f9f9f9] rounded-3xl border border-gray-100">
-            <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center shrink-0">
-              <Store className="w-6 h-6 text-emerald-600" />
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6 p-6 md:p-8 bg-[#f9f9f9] rounded-3xl border border-gray-100 transition hover:shadow-lg">
+            <div className="w-16 h-16 bg-white border border-gray-200 rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
+              <Store className="w-8 h-8 text-emerald-600" />
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1">
-                <h3 className="font-semibold text-gray-900">
-                  {product.seller?.businessName || product.seller?.firstName || "eAson Verified Supplier"}
+                <h3 className="text-lg font-bold text-gray-900">
+                  {product.wholesaler?.companyName || product.wholesaler?.firstName || "eAson Verified Supplier"}
                 </h3>
-                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
-                  VERIFIED
-                </span>
+                {product.wholesaler?.verified && (
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                    <Shield className="w-3 h-3" /> VERIFIED
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-500 flex items-center gap-1.5 mb-3">
-                <MapPin className="w-3.5 h-3.5" />
-                {product.seller?.address || "Kathmandu, Nepal"}
+                <MapPin className="w-4 h-4 text-gray-400" />
+                Kathmandu, Nepal
               </p>
-              <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 font-medium">
                 <span className="flex items-center gap-1">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> 4.8 rating
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" /> 4.9 rating
                 </span>
-                <span>· Member since 2024</span>
-                <span>· Kathmandu Valley</span>
+                <span>· Supplier since 2024</span>
               </div>
             </div>
-            <button className="px-5 py-2.5 border border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:border-gray-400 hover:text-black transition shrink-0">
-              View Store
-            </button>
+            {product.wholesaler?._id && (
+              <button 
+                onClick={() => navigate(`/supplier/${product.wholesaler._id}`)}
+                className="w-full md:w-auto px-6 py-3.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition shrink-0 mt-4 md:mt-0"
+              >
+                Visit Storefront
+              </button>
+            )}
           </div>
         </section>
 

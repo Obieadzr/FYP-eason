@@ -113,7 +113,7 @@ const Register = () => {
         
         // Redirect based on role
         if (res.data.user.role === "admin") navigate("/dashboard");
-        else if (res.data.user.role === "wholesaler") navigate("/wholesaler");
+        else if (res.data.user.role === "wholesaler") navigate("/profile");
         else navigate("/marketplace");
       } else {
         navigate("/login", { state: { message: "Email verified successfully! Please log in." }});

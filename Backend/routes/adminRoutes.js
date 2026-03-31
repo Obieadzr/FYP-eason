@@ -78,11 +78,14 @@ router.get("/analytics", async (req, res) => {
     const totalOrders = await Order.countDocuments();
     const totalProducts = await Product.countDocuments();
 
-    const deliveredOrders = await Order.find({ status: "delivered" });
-    const totalGMV = deliveredOrders.reduce((acc, order) => acc + order.totalAmount, 0);
+    const nonCancelledOrders = await Order.find({ 
+      status: { $in: ["accepted", "processing", "shipped", "delivered", "pending"] } 
+    });
+    const totalGMV = nonCancelledOrders.reduce((acc, order) => acc + (order.grandTotal || order.totalAmount || 0), 0);
 
-    // Fetch the 5 most recent orders for the activity table
+    // Fetch the 5 most recent orders for the activity table, populated with user info
     const recentOrders = await Order.find()
+      .populate("user", "firstName lastName email")
       .sort({ createdAt: -1 })
       .limit(5);
 
@@ -95,7 +98,7 @@ router.get("/analytics", async (req, res) => {
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
     const weeklyOrders = await Order.find({
-      status: "delivered",
+      status: { $in: ["accepted", "processing", "shipped", "delivered"] },
       createdAt: { $gte: sevenDaysAgo, $lte: today }
     });
 

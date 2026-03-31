@@ -4,7 +4,8 @@ import API from "../../utils/api";
 import {
   Users, Store, Activity, CheckCircle, XCircle, 
   ChevronRight, Box, BarChart3, AlertCircle,
-  DollarSign, ShoppingCart, TrendingUp, Calendar, Clock
+  DollarSign, ShoppingCart, TrendingUp, Calendar, Clock,
+  Tags, Ruler, ShieldCheck, Download
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,12 +19,17 @@ const GlowingAreaChart = ({ data }) => {
     </div>
   );
   
+  const isZero = data.every(d => d.revenue === 0);
+  
   const max = Math.max(...data.map(d => d.revenue)) * 1.2 || 1000;
   const min = 0;
   
   const pts = data.map((d, i) => {
     const x = (i / (data.length - 1)) * 1000;
-    const y = 300 - ((d.revenue - min) / (max - min)) * 300;
+    // Base y at 290 so line is visible above grid bottom, and if zero add slight sine wave for visually 'alive' empty state
+    const y = isZero 
+      ? 290 - Math.sin(i) * 5 
+      : 300 - ((d.revenue - min) / (max - min)) * 300;
     return `${x},${y}`;
   });
 
@@ -235,8 +241,8 @@ const Home = () => {
             </p>
           </div>
           <div className="flex gap-4">
-            <button className="px-6 py-3 bg-[#111111] border border-[#222] rounded-full font-bold text-sm text-gray-300 hover:text-white hover:border-[#00e87a]/50 transition-all">
-              Export Report
+            <button className="px-6 py-3 bg-[#111111] border border-[#222] rounded-full font-bold text-sm text-gray-300 hover:text-white hover:border-[#00e87a]/50 transition-all flex items-center gap-2">
+              <Download className="w-4 h-4" /> Export Report
             </button>
             <button onClick={() => navigate("/dashboard/products/add")} className="px-6 py-3 bg-[#00e87a] text-black rounded-full font-bold text-sm shadow-[0_0_20px_rgba(0,232,122,0.3)] hover:shadow-[0_0_30px_rgba(0,232,122,0.6)] hover:bg-[#00fc85] transition-all flex items-center gap-2">
               <Box className="w-4 h-4" /> Add Product
@@ -342,8 +348,8 @@ const Home = () => {
                       >
                         <td className="py-5 px-8 text-sm font-mono text-[#00e87a]">#{order._id.slice(-6).toUpperCase()}</td>
                         <td className="py-5 px-8">
-                          <p className="text-sm font-bold text-white">{order.retailer?.firstName} {order.retailer?.lastName}</p>
-                          <p className="text-xs font-medium text-gray-500">{order.retailer?.email}</p>
+                          <p className="text-sm font-bold text-white">{order.user?.firstName} {order.user?.lastName}</p>
+                          <p className="text-xs font-medium text-gray-500">{order.user?.email}</p>
                         </td>
                         <td className="py-5 px-8">
                           <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border
@@ -432,31 +438,51 @@ const Home = () => {
               )}
             </motion.div>
 
-            {/* System Status Mini Widget */}
+            {/* Quick Actions & System Status */}
             <motion.div 
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.7 }}
               className="bg-[#111111] rounded-[24px] p-8 border border-[#222] shadow-2xl"
             >
-              <h2 className="text-lg font-bold text-white tracking-tight mb-6" style={{ fontFamily: "'Syne', sans-serif" }}>Platform Health</h2>
-              <div className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#00e87a]/10 border border-[#00e87a]/20 flex items-center justify-center shrink-0">
-                    <Activity className="w-5 h-5 text-[#00e87a]" />
+              <h2 className="text-lg font-bold text-white tracking-tight mb-6" style={{ fontFamily: "'Syne', sans-serif" }}>Command Center</h2>
+              
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                <button onClick={() => navigate("/dashboard/categories")} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-[#00e87a]/10 hover:border-[#00e87a]/30 transition-all group">
+                  <Tags className="w-6 h-6 text-gray-400 group-hover:text-[#00e87a] transition-colors" />
+                  <span className="text-xs font-bold text-gray-300 group-hover:text-white">Categories</span>
+                </button>
+                <button onClick={() => navigate("/dashboard/users")} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-[#00e87a]/10 hover:border-[#00e87a]/30 transition-all group">
+                  <Users className="w-6 h-6 text-gray-400 group-hover:text-[#00e87a] transition-colors" />
+                  <span className="text-xs font-bold text-gray-300 group-hover:text-white">Users</span>
+                </button>
+                <button onClick={() => navigate("/dashboard/units")} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-[#00e87a]/10 hover:border-[#00e87a]/30 transition-all group">
+                  <Ruler className="w-6 h-6 text-gray-400 group-hover:text-[#00e87a] transition-colors" />
+                  <span className="text-xs font-bold text-gray-300 group-hover:text-white">Units</span>
+                </button>
+                <button onClick={() => navigate("/dashboard/verification")} className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-[#00e87a]/10 hover:border-[#00e87a]/30 transition-all group">
+                  <ShieldCheck className="w-6 h-6 text-gray-400 group-hover:text-[#00e87a] transition-colors" />
+                  <span className="text-xs font-bold text-gray-300 group-hover:text-white">Verify KYC</span>
+                </button>
+              </div>
+
+              <div className="space-y-4 pt-6 border-t border-[#222]">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-[#00e87a]/10 border border-[#00e87a]/20 flex items-center justify-center shrink-0">
+                    <Activity className="w-4 h-4 text-[#00e87a]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-gray-200">Servers Operating Normally</h4>
-                    <p className="text-xs font-medium text-gray-500 mt-1">99.9% uptime</p>
+                    <h4 className="text-sm font-bold text-gray-200">System Nominal</h4>
+                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest mt-0.5">100% Uptime</p>
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#00e87a]/10 border border-[#00e87a]/20 flex items-center justify-center shrink-0">
-                    <AlertCircle className="w-5 h-5 text-[#00e87a]" />
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-[#00e87a]/10 border border-[#00e87a]/20 flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-4 h-4 text-[#00e87a]" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-gray-200">{data.products.toLocaleString()} Products Synced</h4>
-                    <p className="text-xs font-medium text-gray-500 mt-1">Catalog status nominal</p>
+                    <h4 className="text-sm font-bold text-gray-200">{data.products.toLocaleString()} Products Indexed</h4>
+                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-widest mt-0.5">Catalog Synced</p>
                   </div>
                 </div>
               </div>

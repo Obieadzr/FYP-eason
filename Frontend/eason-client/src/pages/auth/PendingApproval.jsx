@@ -37,7 +37,7 @@ export default function PendingApproval() {
   // If verified, throw them out
   useEffect(() => {
     if (user?.verified) {
-      navigate(user.role === 'wholesaler' ? '/wholesaler' : '/marketplace');
+      navigate(user.role === 'wholesaler' ? '/profile' : '/marketplace');
     }
   }, [user, navigate]);
 
