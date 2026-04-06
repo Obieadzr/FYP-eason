@@ -4,6 +4,8 @@ import Order from "../models/Order.js";
 import User from "../models/User.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { createOrder, updateOrderStatus } from "../controllers/orderController.js";
+import { validate } from "../middleware/validate.js";
+import { orderSchema } from "../validators/schemas.js";
 import { sendOrderStatusUpdate } from "../utils/email.js";
 import Wallet from "../models/Wallet.js";
 
@@ -119,19 +121,54 @@ router.put("/:id/status", authMiddleware, async (req, res) => {
     });
   }
 
-  try {
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true, runValidators: true }
-    ).populate("user", "firstName lastName email").populate({ path: "items.product", select: "wholesaler" });
+  // Simulated Logistics: Assign Rider
+  let logisticsUpdates = { status };
+  if (status === "processing" || status === "shipped") {
+    const mockRiders = [
+      { name: "Aarav Sharma", phone: "9800000001" },
+      { name: "Sita Thapa", phone: "9800000002" },
+      { name: "Bikash Gurung", phone: "9800000003" },
+      { name: "Nima Sherpa", phone: "9800000004" }
+    ];
+    const rider = mockRiders[Math.floor(Math.random() * mockRiders.length)];
+    
+    // Only set if not already set
+    logisticsUpdates = {
+      status,
+      $setOnInsert: {
+        trackingId: "EASN-" + Math.random().toString(36).substr(2, 6).toUpperCase(),
+        riderName: rider.name,
+        riderPhone: rider.phone,
+        estimatedDelivery: new Date(Date.now() + 48 * 60 * 60 * 1000) // 48 hrs later
+      }
+    };
+  }
 
-    if (!order) {
-      return res.status(404).json({
-        success: false,
-        message: "Order not found",
-      });
+  try {
+    // If we want $setOnInsert to work we can just do a find first to check if they exist, or just conditionally apply to update object
+    const currentOrder = await Order.findById(req.params.id);
+    if (!currentOrder) return res.status(404).json({ success: false, message: "Order not found" });
+
+    currentOrder.status = status;
+    if ((status === "processing" || status === "shipped") && !currentOrder.trackingId) {
+      const mockRiders = [
+        { name: "Aarav Sharma", phone: "9800000001" },
+        { name: "Sita Thapa", phone: "9800000002" },
+        { name: "Bikash Gurung", phone: "9800000003" },
+        { name: "Nima Sherpa", phone: "9800000004" }
+      ];
+      const rider = mockRiders[Math.floor(Math.random() * mockRiders.length)];
+      currentOrder.trackingId = "EASN-" + Math.random().toString(36).substr(2, 6).toUpperCase();
+      currentOrder.riderName = rider.name;
+      currentOrder.riderPhone = rider.phone;
+      currentOrder.estimatedDelivery = new Date(Date.now() + 48 * 60 * 60 * 1000);
     }
+    
+    await currentOrder.save();
+    
+    const order = await Order.findById(req.params.id)
+      .populate("user", "firstName lastName email")
+      .populate({ path: "items.product", select: "wholesaler" });
 
     // Send status update email
     try {

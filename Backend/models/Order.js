@@ -39,9 +39,14 @@ const orderSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ["esewa", "khalti", "cod", "khata"],
-      default: "cod",
+      enum: ["cod", "khalti", "esewa", "bank_transfer"],
+      required: true,
     },
+    // Logistics
+    trackingId: { type: String },
+    riderName: { type: String },
+    riderPhone: { type: String },
+    estimatedDelivery: { type: Date },
     khataUsed: {
       type: Number,
       default: 0,

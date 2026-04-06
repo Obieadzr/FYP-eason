@@ -375,6 +375,69 @@ const Home = () => {
               </div>
             </motion.div>
 
+            {/* Predictive Restocking Table */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="bg-[#111111] rounded-[24px] border border-[#222] shadow-2xl overflow-hidden mt-8"
+            >
+              <div className="p-8 pb-6 flex items-center justify-between border-b border-[#222]">
+                <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-2" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  <TrendingUp className="w-5 h-5 text-orange-500" /> Predictive Restocking Alerts
+                </h2>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-white/[0.02]">
+                      <th className="py-4 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-white/5">Product</th>
+                      <th className="py-4 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 text-right">Current Stock</th>
+                      <th className="py-4 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 text-right">Velocity/Day</th>
+                      <th className="py-4 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 text-right">Days Left</th>
+                      <th className="py-4 px-8 text-xs font-bold text-gray-500 uppercase tracking-widest border-b border-white/5 text-right">Suggested Restock</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {data.predictiveRestocking?.map((alert, i) => (
+                      <motion.tr 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.9 + (i * 0.1) }}
+                        key={alert.productId} 
+                        className="hover:bg-white/[0.03] transition-colors group"
+                      >
+                        <td className="py-5 px-8 flex items-center gap-3">
+                          <img src={`http://localhost:5000${alert.image}`} alt={alert.name} className="w-8 h-8 rounded shrink-0 object-cover bg-white" />
+                          <p className="text-sm font-bold text-white max-w-[200px] truncate">{alert.name}</p>
+                        </td>
+                        <td className="py-5 px-8 text-right text-sm font-bold text-gray-300">
+                          {alert.currentStock}
+                        </td>
+                        <td className="py-5 px-8 text-right text-sm font-bold text-gray-300">
+                          {alert.velocityPerDay}/d
+                        </td>
+                        <td className="py-5 px-8 text-right">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border border-red-500/20 bg-red-500/10 text-red-500`}>
+                            {alert.daysRemaining} Days
+                          </span>
+                        </td>
+                        <td className="py-5 px-8 text-right text-sm font-bold text-[#00e87a] tabular-nums">
+                          +{alert.suggestedRestock} units
+                        </td>
+                      </motion.tr>
+                    ))}
+                    {(!data.predictiveRestocking || data.predictiveRestocking.length === 0) && (
+                      <tr>
+                        <td colSpan="5" className="py-12 text-center text-gray-500 text-sm font-medium tracking-wide">Stock levels are healthy. No alerts.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </motion.div>
+
           </div>
 
           {/* Right Column: Alerts & Controls */}

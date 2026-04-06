@@ -44,11 +44,13 @@ const productSchema = new mongoose.Schema(
 
     bulkPricing: [
       {
-        minQuantity: { type: Number, min: 1, required: true },
-        pricePerUnit: { type: Number, min: 0, required: true },
-        _id: false,
+        minQuantity: { type: Number, required: true },
+        pricePerUnit: { type: Number, required: true },
       },
     ],
+    averageRating: { type: Number, default: 0 },
+    reviewCount: { type: Number, default: 0 },
+    images: [{ type: String }],
 
     stock: {
       type: Number,

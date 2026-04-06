@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import API from "../../utils/api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuthStore } from "../../store/authStore.js";
+import ReviewSection from "./ReviewSection.jsx";
 
 /* ─── Sticky navbar that starts transparent and becomes solid on scroll ─── */
 function StickyNav() {
@@ -663,6 +664,9 @@ export default function ProductDetail() {
             <p className="text-gray-600 text-sm leading-7 max-w-2xl">{product.description}</p>
           </section>
         )}
+
+        {/* ── Reviews ── */}
+        <ReviewSection productId={product._id} />
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}

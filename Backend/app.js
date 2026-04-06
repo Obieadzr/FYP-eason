@@ -23,6 +23,8 @@ import adminKycRoutes from './routes/adminKycRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
 import quoteRoutes from './routes/quoteRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import reviewRoutes from './routes/reviewRoutes.js';
 
 dotenv.config();
 
@@ -95,8 +97,10 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/admin/kyc', adminKycRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/quotes', quoteRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 app.get('/', (req, res) => res.send('eAson backend running!'));
 

@@ -7,7 +7,7 @@ import mongoose from "mongoose";
 
 export const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, phone, notes } = req.body;
+    const { items, shippingAddress, phone, notes, paymentMethod } = req.body;
     const userId = req.user.id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -41,9 +41,9 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      let priceToUse = updated.wholesalerPrice;
+      let priceToUse = updated.wholesalerPrice || updated.baseCost || 0;
       if (updated.bulkPricing && updated.bulkPricing.length > 0) {
-        const sortedTiers = updated.bulkPricing.sort((a, b) => b.minQuantity - a.minQuantity);
+        const sortedTiers = [...updated.bulkPricing].sort((a, b) => b.minQuantity - a.minQuantity);
         for (const tier of sortedTiers) {
           if (cartItem.quantity >= tier.minQuantity) {
             priceToUse = tier.pricePerUnit;
@@ -81,6 +81,7 @@ export const createOrder = async (req, res) => {
       notes: notes?.trim() || "",
       status: "pending",
       paymentStatus: "pending",
+      paymentMethod: paymentMethod || "cod",
     });
 
     console.log(`Order created: ${order._id} | Subtotal: ${totalAmount} | Tax: ${taxAmount} | Grand: ${grandTotal}`);

@@ -122,6 +122,53 @@ router.get("/analytics", async (req, res) => {
       revenue: revenueByDay[date]
     }));
 
+    // Predictive Restocking Model
+    // 1. Calculate sales velocity over last 14 days
+    const fourteenDaysAgo = new Date(today);
+    fourteenDaysAgo.setDate(today.getDate() - 14);
+    
+    const recentOrdersForMath = await Order.find({
+      status: { $in: ["accepted", "processing", "shipped", "delivered"] },
+      createdAt: { $gte: fourteenDaysAgo }
+    });
+
+    const productSales = {}; // productId -> quantity
+    recentOrdersForMath.forEach(order => {
+      order.items.forEach(item => {
+        const pId = item.product?.toString();
+        if (pId) {
+          productSales[pId] = (productSales[pId] || 0) + item.quantity;
+        }
+      });
+    });
+
+    // 2. Fetch those products and calculate Days of Inventory Remaining (DIR)
+    const activeProducts = await Product.find({ _id: { $in: Object.keys(productSales) } })
+      .select("name stock image wholesalerPrice");
+    
+    const predictiveRestocking = [];
+    activeProducts.forEach(prod => {
+      const soldIn14Days = productSales[prod._id.toString()];
+      const velocityPerDay = soldIn14Days / 14;
+      const daysRemaining = velocityPerDay > 0 ? Math.floor(prod.stock / velocityPerDay) : 999;
+      
+      // If less than 7 days of stock left, trigger an alert
+      if (daysRemaining < 14) {
+        predictiveRestocking.push({
+          productId: prod._id,
+          name: prod.name,
+          image: prod.image,
+          currentStock: prod.stock,
+          velocityPerDay: velocityPerDay.toFixed(1),
+          daysRemaining: daysRemaining,
+          suggestedRestock: Math.ceil(velocityPerDay * 30) // Suggest restocking for 30 days
+        });
+      }
+    });
+
+    // Sort by most urgent (lowest days remaining)
+    predictiveRestocking.sort((a, b) => a.daysRemaining - b.daysRemaining);
+
     res.json({
       users: {
         total: totalUsers,
@@ -132,7 +179,8 @@ router.get("/analytics", async (req, res) => {
       products: totalProducts,
       gmv: totalGMV,
       recentOrders,
-      revenueData
+      revenueData,
+      predictiveRestocking: predictiveRestocking.slice(0, 10) // top 10 alerts
     });
   } catch (err) {
     console.error("Analytics Error:", err);

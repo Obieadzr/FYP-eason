@@ -145,10 +145,9 @@ function OrderCard({ order, onVerify, onReorder }) {
                       {steps.map((step, i) => (
                          <div key={step} className="flex flex-col items-center gap-2">
                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-                              i < currentStep ? "bg-emerald-500 text-white" : i === currentStep ? "bg-white border-2 border-emerald-500 text-emerald-500 shadow-sm" : "bg-white border-2 border-gray-200 text-gray-300"
+                              i <= currentStep ? "bg-emerald-500 text-white" : "bg-white border-2 border-gray-200 text-gray-300"
                            }`}>
-                             {i < currentStep && <Check className="w-4 h-4" />}
-                             {i === currentStep && <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full" />}
+                             {i <= currentStep && <Check className="w-4 h-4" />}
                            </div>
                            <span className={`text-[11px] font-semibold text-center ${i <= currentStep ? "text-gray-900" : "text-gray-400"}`}>
                              {step}
@@ -159,6 +158,27 @@ function OrderCard({ order, onVerify, onReorder }) {
                   </div>
                 );
               })()}
+
+              {/* Logistics Tracking Card */}
+              {order.trackingId && (
+                <div className="bg-blue-50 border border-blue-100 rounded-xl px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shrink-0 border border-blue-100 shadow-sm">
+                      <Truck className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-500 font-semibold uppercase tracking-wider">Delivery Partner</p>
+                      <p className="text-sm font-bold text-gray-900">{order.riderName || "Assigned Rider"}</p>
+                      <p className="text-xs text-gray-500">📞 {order.riderPhone}</p>
+                    </div>
+                  </div>
+                  <div className="sm:text-right bg-white px-3 py-2 rounded-lg border border-blue-100/50">
+                    <p className="text-[10px] text-blue-400 font-semibold uppercase tracking-wider mb-0.5">Tracking ID</p>
+                    <p className="text-sm font-bold text-gray-900 tracking-widest">{order.trackingId}</p>
+                    {order.estimatedDelivery && <p className="text-[10px] text-gray-500 mt-0.5">Est. {new Date(order.estimatedDelivery).toLocaleDateString()}</p>}
+                  </div>
+                </div>
+              )}
 
               {/* Verify & Receive Button for Shipped Orders */}
               {order.status === "shipped" && onVerify && (

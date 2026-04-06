@@ -277,7 +277,7 @@ export default function AddProduct() {
                           onChange={handleChange}
                           placeholder="Tell the narrative behind this drop..."
                           rows={4}
-                          className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium resize-none"
+                          className="w-full bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium resize-none"
                         />
                       </div>
                     </div>
@@ -318,7 +318,7 @@ export default function AddProduct() {
                                     ref={provided.innerRef}
                                     {...provided.draggableProps}
                                     {...provided.dragHandleProps}
-                                    className="relative aspect-square rounded-2xl overflow-hidden group border border-gray-200"
+                                    className="relative aspect-square rounded-2xl overflow-hidden group border border-gray-300"
                                   >
                                     <img src={src} alt="" className="w-full h-full object-cover" />
                                     <button
@@ -336,10 +336,10 @@ export default function AddProduct() {
                             {previews.length < 5 && (
                               <div
                                 onClick={() => fileInputRef.current?.click()}
-                                className="aspect-square rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition"
+                                className="aspect-square rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition"
                               >
-                                <Upload className="w-8 h-8 text-emerald-500 mb-2" />
-                                <span className="text-sm font-semibold text-emerald-600">Upload</span>
+                                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                                <span className="text-sm font-semibold text-gray-500">Upload</span>
                               </div>
                             )}
                           </div>
@@ -349,7 +349,7 @@ export default function AddProduct() {
                     <input type="file" multiple accept="image/*" ref={fileInputRef} onChange={(e) => handleImageChange(e.target.files)} className="hidden" />
 
                     <div className="flex gap-4">
-                      <button onClick={() => setStep(1)} className="px-8 py-4 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
+                      <button onClick={() => setStep(1)} className="px-8 py-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
                         Back
                       </button>
                       <button
@@ -391,7 +391,7 @@ export default function AddProduct() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-gray-700 tracking-wide">Unit Type <span className="text-red-500">*</span></label>
-                        <select name="unit" value={form.unit} onChange={handleChange} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none">
+                        <select name="unit" value={form.unit} onChange={handleChange} className="w-full bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium appearance-none">
                           <option value="">Select Unit</option>
                           {units.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
                         </select>
@@ -409,7 +409,7 @@ export default function AddProduct() {
                     )}
 
                     <div className="flex gap-4 pt-4">
-                      <button onClick={() => setStep(2)} className="px-8 py-4 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
+                      <button onClick={() => setStep(2)} className="px-8 py-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
                         Back
                       </button>
                       <button onClick={() => { if(form.category && form.unit && form.baseCost && form.wholesalerPrice) setStep(4); else toast.error("Pricing and Categories are required.")}}
@@ -433,7 +433,7 @@ export default function AddProduct() {
                       <p className="text-gray-500">Confirm everything looks good before dropping.</p>
                     </div>
 
-                    <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 space-y-4">
+                    <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 space-y-4">
                       <div className="flex items-center justify-between pb-4 border-b border-gray-200">
                         <span className="text-gray-500 font-semibold text-sm">Product Name</span>
                         <span className="font-bold text-gray-900">{form.name}</span>
@@ -449,7 +449,7 @@ export default function AddProduct() {
                     </div>
 
                     <div className="flex gap-4">
-                      <button onClick={() => setStep(3)} className="px-8 py-4 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
+                      <button onClick={() => setStep(3)} className="px-8 py-4 border border-gray-300 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition">
                         Back
                       </button>
                       <button
