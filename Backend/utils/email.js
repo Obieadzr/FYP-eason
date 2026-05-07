@@ -146,3 +146,31 @@ export const sendVerificationEmail = async (email, otp) => {
     html,
   });
 };
+
+export const sendPasswordResetEmail = async (email, otp) => {
+  const html = `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #eaeaea; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #0d0d0d; font-size: 28px; font-weight: 800; letter-spacing: -1px; margin: 0;">eAson<span style="color: #10b981;">.</span></h1>
+      </div>
+      <h2 style="color: #111827; font-size: 22px; font-weight: 700; margin-bottom: 16px; text-align: center;">Reset your password</h2>
+      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; text-align: center; margin-bottom: 32px;">
+        We received a request to reset your eAson password. Enter the code below — it expires in <strong>10 minutes</strong>.
+      </p>
+      <div style="background-color: #f9fafb; border: 2px dashed #10b981; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 32px;">
+        <span style="font-family: monospace; font-size: 38px; font-weight: 700; letter-spacing: 12px; color: #10b981;">
+          ${otp}
+        </span>
+      </div>
+      <p style="color: #6b7280; font-size: 14px; text-align: center; line-height: 1.5; margin-bottom: 0;">
+        If you didn't request a password reset, you can safely ignore this email.<br>
+        Your password will not change unless you enter this code.
+      </p>
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 32px 0;">
+      <p style="color: #9ca3af; font-size: 12px; text-align: center; margin: 0;">
+        &copy; ${new Date().getFullYear()} eAson Nepal. All rights reserved.
+      </p>
+    </div>
+  `;
+  return sendEmail({ to: email, subject: 'eAson - Password Reset Code', html });
+};

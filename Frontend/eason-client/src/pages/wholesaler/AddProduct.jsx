@@ -44,6 +44,8 @@ export default function AddProduct() {
     description: "",
     baseCost: "",
     wholesalerPrice: "",
+    discountPercentage: "",
+    suggestedRetailPrice: "",
     stock: "",
     category: "",
     unit: "",
@@ -87,6 +89,23 @@ export default function AddProduct() {
           } else if (p.image) {
             setPreviews([`http://localhost:5000${p.image}`]);
           }
+        } else {
+          // Explicitly reset form if no editId (navigating from edit to create)
+          setForm({
+            name: "",
+            description: "",
+            baseCost: "",
+            wholesalerPrice: "",
+            discountPercentage: "",
+            suggestedRetailPrice: "",
+            stock: "",
+            category: "",
+            unit: "",
+            images: [],
+          });
+          setAttributeValues({});
+          setPreviews([]);
+          setStep(1);
         }
       } catch (err) {
         toast.error("Failed to load initial data");
@@ -144,6 +163,8 @@ export default function AddProduct() {
     formData.append("description", form.description);
     formData.append("baseCost", Number(form.baseCost));
     formData.append("wholesalerPrice", Number(form.wholesalerPrice));
+    if (form.discountPercentage) formData.append("discountPercentage", Number(form.discountPercentage));
+    if (form.suggestedRetailPrice) formData.append("suggestedRetailPrice", Number(form.suggestedRetailPrice));
     formData.append("stock", Number(form.stock || 1));
     formData.append("category", form.category);
     formData.append("unit", form.unit);
@@ -377,6 +398,8 @@ export default function AddProduct() {
                     <div className="grid grid-cols-2 gap-x-6 gap-y-6">
                       <BrandInput label="Base Cost (Rs)" type="number" name="baseCost" value={form.baseCost} onChange={handleChange} placeholder="0.00" />
                       <BrandInput label="Wholesale Price (Rs)" type="number" name="wholesalerPrice" value={form.wholesalerPrice} onChange={handleChange} placeholder="0.00" />
+                      <BrandInput label="Discount % (Optional)" type="number" name="discountPercentage" value={form.discountPercentage} onChange={handleChange} placeholder="e.g. 15" />
+                      <BrandInput label="MSRP (Optional)" type="number" name="suggestedRetailPrice" value={form.suggestedRetailPrice} onChange={handleChange} placeholder="Retail Selling Price" />
                       <BrandInput label="Initial Stock" type="number" name="stock" value={form.stock} onChange={handleChange} placeholder="1" />
                     </div>
 

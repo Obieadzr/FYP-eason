@@ -29,7 +29,9 @@ const userSchema = new mongoose.Schema({
   kycSubmittedAt: { type: Date },
   kycReviewedAt: { type: Date },
   kycReviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+  wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  passwordResetOtp: { type: String },
+  passwordResetOtpExpires: { type: Date },
 }, { timestamps: true });
 
 userSchema.virtual('fullName').get(function() {

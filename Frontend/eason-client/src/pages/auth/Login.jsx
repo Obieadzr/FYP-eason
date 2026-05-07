@@ -1,182 +1,212 @@
 // src/pages/auth/Login.jsx
-import React, { useState, Suspense } from "react";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ArrowRight } from "lucide-react";
-import API from "../../utils/api.js";
+import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
-import { motion, AnimatePresence } from "framer-motion";
-import { Canvas } from "@react-three/fiber";
-import { Float, MeshDistortMaterial, Sphere, MeshWobbleMaterial, TorusKnot } from "@react-three/drei";
-
-const FiberScene = () => (
-  <Canvas camera={{ position: [0, 0, 6], fov: 60 }} dpr={[1, 2]}>
-    <ambientLight intensity={0.3} />
-    <directionalLight position={[-10, 10, 5]} intensity={1.8} color="#6366f1" />
-    <directionalLight position={[10, -5, -5]} intensity={0.8} color="#10b981" />
-    <pointLight position={[0, 2, 2]} intensity={1.5} color="#818cf8" />
-    <Float speed={0.8} rotationIntensity={0.8} floatIntensity={0.6}>
-      <TorusKnot args={[1.2, 0.35, 256, 32]} scale={1.4}>
-        <MeshWobbleMaterial color="#10b981" factor={0.15} speed={1} roughness={0.05} metalness={0.98} transparent opacity={0.22} />
-      </TorusKnot>
-    </Float>
-    <Float speed={3} rotationIntensity={2} floatIntensity={2}>
-      <Sphere args={[1, 64, 64]} scale={0.9} position={[2.5, 1.5, -1]}>
-        <MeshDistortMaterial color="#818cf8" distort={0.5} speed={3} roughness={0.05} metalness={0.95} transparent opacity={0.3} />
-      </Sphere>
-    </Float>
-    <Float speed={2} rotationIntensity={1.5} floatIntensity={1.5}>
-      <Sphere args={[1, 64, 64]} scale={1.3} position={[-2, -1.5, -2]}>
-        <MeshDistortMaterial color="#14b8a6" distort={0.4} speed={2.5} roughness={0.1} metalness={0.9} transparent opacity={0.2} />
-      </Sphere>
-    </Float>
-  </Canvas>
-);
-
-const inputCls = "w-full bg-white/5 border border-white/10 text-white placeholder-white/20 text-sm px-4 py-3.5 rounded-xl focus:outline-none focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/15 transition";
+import toast from "react-hot-toast";
+import api from "../../utils/api";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login: zustandLogin, checkAuth } = useAuthStore();
+  const { login } = useAuthStore();
 
-  const [showPass, setShowPass] = useState(false);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState("");
-  const [email, setEmail]       = useState("");
-  const [password, setPassword] = useState("");
+  const [form, setForm] = useState({ email: "", password: "" });
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [shake, setShake] = useState(false);
+
+  const triggerShake = () => {
+    setShake(true);
+    setTimeout(() => setShake(false), 500);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!form.email || !form.password) {
+      toast.error("Please fill in all fields.");
+      triggerShake();
+      return;
+    }
     setLoading(true);
-    setError("");
     try {
-      const res = await API.post("/auth/login", { email, password });
-      // Store token so API calls are authenticated
-      if (res.data.token) {
-        localStorage.setItem("eason_token", res.data.token);
-      }
-      zustandLogin(res.data.user);
-      await checkAuth();
-      const role = res.data.user?.role;
-      navigate(role === "admin" ? "/dashboard" : role === "wholesaler" ? "/profile" : "/marketplace");
+      const { data } = await api.post("/auth/login", form);
+      localStorage.setItem("eason_token", data.token);
+      login(data.user);
+      toast.success("Welcome back!");
+      const role = data.user?.role;
+      if (role === "admin") navigate("/dashboard");
+      else navigate("/profile");
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid email or password.");
+      toast.error(err?.response?.data?.message || "Invalid credentials.");
+      triggerShake();
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#080808] grid lg:grid-cols-2" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
-      {/* Left — 3D scene */}
-      <div className="relative hidden lg:block overflow-hidden">
-        <Suspense fallback={null}>
-          <FiberScene />
-        </Suspense>
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#080808]/60" />
-        <div className="absolute bottom-16 left-16 right-16">
-          <h1 className="text-5xl font-light text-white leading-tight tracking-tighter">
-            Good to have<br />
-            <span className="text-emerald-400 font-semibold">you back.</span>
-          </h1>
-          <p className="mt-4 text-white/40 text-sm leading-relaxed max-w-xs">
-            Your orders, stock, and suppliers — all waiting right where you left them.
-          </p>
-        </div>
-      </div>
+    <div className="relative min-h-screen bg-[#0a0a0a] flex items-center justify-center overflow-hidden px-4">
 
-      {/* Right — form */}
-      <div className="flex items-center justify-center px-8 py-16">
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-md"
+      {/* Premium back button */}
+      <Link
+        to="/"
+        className="absolute top-6 left-6 z-20 flex items-center gap-2 text-white/40 hover:text-white/80 transition-all duration-200 group"
+        style={{ textDecoration: "none" }}
+      >
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.04)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            backdropFilter: "blur(8px)",
+            transition: "all 200ms",
+          }}
+          className="group-hover:border-white/20 group-hover:bg-white/8"
         >
-          <Link to="/" className="inline-block text-xl font-bold text-white mb-12">
-            eAson<span className="text-emerald-400">.</span>
-          </Link>
+          <ArrowLeft size={14} />
+        </span>
+        <span style={{ fontSize: 13, fontWeight: 500, letterSpacing: "-0.01em" }}>eAson</span>
+      </Link>
+      {/* Noise texture overlay */}
+      <div
+        className="pointer-events-none absolute inset-0 z-0"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+          opacity: 0.035,
+        }}
+      />
 
-          <h2 className="text-3xl font-semibold text-white mb-1">Sign in</h2>
-          <p className="text-white/35 text-sm mb-10">
-            New here?{" "}
-            <Link to="/register" className="text-emerald-400 hover:text-emerald-300 font-medium transition">
-              Create an account
+      {/* Ambient glow blob */}
+      <div
+        className="pointer-events-none absolute z-0"
+        style={{
+          width: 600,
+          height: 600,
+          borderRadius: "50%",
+          background: "radial-gradient(circle, #10b981 0%, transparent 70%)",
+          opacity: 0.06,
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          animation: "blobDrift 18s ease-in-out infinite",
+        }}
+      />
+
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
+        * { font-family: 'DM Sans', sans-serif; }
+        @keyframes blobDrift {
+          0%, 100% { transform: translate(-50%, -50%) scale(1); }
+          33% { transform: translate(-44%, -54%) scale(1.08); }
+          66% { transform: translate(-56%, -46%) scale(0.96); }
+        }
+      `}</style>
+
+      {/* Form card */}
+      <motion.div
+        animate={shake ? { x: [-4, 4, -3, 3, 0] } : { x: 0 }}
+        transition={{ duration: 0.4 }}
+        className="relative z-10 w-full max-w-[400px]"
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          {/* Logo */}
+          <div className="mb-12 text-center">
+            <Link to="/" className="text-sm font-medium tracking-widest text-white/80 hover:text-white transition-colors">
+              eAson.
             </Link>
-          </p>
+          </div>
 
+          {/* Heading */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-semibold tracking-tight text-white mb-2">Sign in</h1>
+            <p className="text-sm text-white/40">Welcome back. Enter your credentials to continue.</p>
+          </div>
+
+          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-white/40 uppercase tracking-wider mb-1.5">
+              <label className="block text-[11px] font-medium text-white/40 uppercase tracking-widest mb-1.5">
                 Email
               </label>
               <input
                 type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
                 autoComplete="email"
-                className={inputCls}
+                placeholder="you@example.com"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="w-full bg-transparent border border-white/12 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-white/20 outline-none transition-colors focus:border-white/40"
               />
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-1.5">
-                <label className="text-xs font-semibold text-white/40 uppercase tracking-wider">Password</label>
-                <a href="#" className="text-xs text-emerald-400 hover:text-emerald-300 transition">Forgot password?</a>
-              </div>
+              <label className="block text-[11px] font-medium text-white/40 uppercase tracking-widest mb-1.5">
+                Password
+              </label>
               <div className="relative">
                 <input
-                  type={showPass ? "text" : "password"}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Your password"
-                  required
+                  type={showPw ? "text" : "password"}
                   autoComplete="current-password"
-                  className={`${inputCls} pr-11`}
+                  placeholder="••••••••"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="w-full bg-transparent border border-white/12 rounded-lg px-3.5 py-2.5 pr-10 text-sm text-white placeholder:text-white/20 outline-none transition-colors focus:border-white/40"
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute right-3.5 top-3.5 text-white/30 hover:text-white/60 transition"
+                  onClick={() => setShowPw(!showPw)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
                 >
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
+              </div>
+              <div className="mt-2 text-right">
+                <Link to="/forgot-password" className="text-[11px] text-white/30 hover:text-white/60 transition-colors">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 
-            <AnimatePresence>
-              {error && (
-                <motion.p
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-xl"
-                >
-                  {error}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
             <motion.button
               type="submit"
-              disabled={loading}
               whileTap={{ scale: 0.98 }}
-              className="w-full py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-100 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 mt-2 text-sm"
+              disabled={loading}
+              className="w-full mt-2 bg-white text-black font-medium text-sm rounded-lg py-2.5 hover:bg-white/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {loading ? "Signing in..." : "Sign In"}
-              {!loading && <ArrowRight className="w-4 h-4" />}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign in"
+              )}
             </motion.button>
           </form>
 
-          <p className="mt-8 text-center text-white/20 text-xs">
-            By signing in you agree to our{" "}
-            <a href="#" className="text-white/40 hover:text-white transition">Terms</a> and{" "}
-            <a href="#" className="text-white/40 hover:text-white transition">Privacy Policy</a>.
-          </p>
+          {/* Footer links */}
+          <div className="mt-8 text-center space-y-3">
+            <p className="text-sm text-white/30">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-white/60 hover:text-white transition-colors">
+                Create one
+              </Link>
+            </p>
+            <p className="text-[11px] text-white/20">
+              Trusted by verified traders across Nepal
+            </p>
+          </div>
         </motion.div>
-      </div>
+      </motion.div>
     </div>
   );
 }

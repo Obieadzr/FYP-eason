@@ -559,7 +559,7 @@ export default function Profile() {
                         />
                       </div>
                       <button
-                        onClick={() => setModal({ mode: "add" })}
+                        onClick={() => navigate("/add-product")}
                         className="bg-emerald-600 text-white px-5 py-2.5 text-sm font-semibold rounded-xl hover:bg-emerald-700 transition flex items-center gap-2 shadow-sm shadow-emerald-200 shrink-0"
                       >
                         <Plus className="w-4 h-4" /> Add Product
@@ -575,7 +575,7 @@ export default function Profile() {
                       <h2 className="text-2xl font-bold text-gray-900">No products yet</h2>
                       <p className="text-gray-500 max-w-xs mx-auto mt-2">Add your first product and start selling to retailers across Kathmandu</p>
                       <button
-                        onClick={() => setModal({ mode: "add" })}
+                        onClick={() => navigate("/add-product")}
                         className="bg-emerald-600 text-white px-8 py-4 rounded-2xl font-semibold hover:bg-emerald-700 mt-8 flex items-center gap-2 transition shadow-lg shadow-emerald-200"
                       >
                         <Plus className="w-5 h-5" /> Add Your First Product
@@ -624,7 +624,7 @@ export default function Profile() {
                                 <td className="py-4 px-6 text-right">
                                   <div className="flex items-center justify-end gap-2">
                                     <button
-                                      onClick={() => setModal({ mode: "edit", product: p })}
+                                      onClick={() => navigate(`/add-product?edit=${p._id}`)}
                                       className="p-2 text-gray-400 hover:text-emerald-600 transition rounded-lg hover:bg-emerald-50"
                                       title="Edit Product"
                                     >
@@ -865,16 +865,7 @@ export default function Profile() {
         </main>
       </div>
 
-      <AnimatePresence>
-        {modal && (
-          <ProductModal
-            product={modal.product}
-            categories={categories}
-            onClose={() => setModal(null)}
-            onSave={() => { setModal(null); window.location.reload(); }}
-          />
-        )}
-      </AnimatePresence>
+      {/* ProductModal has been removed, navigating to /add-product instead */}
       <AnimatePresence>
         {selectedOrder && (
           <motion.div

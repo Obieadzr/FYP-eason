@@ -11,7 +11,7 @@ export default function VerificationQueue() {
   const [filter, setFilter] = useState("all"); // 'all', 'pending', 'ai_checked', 'rejected'
 
   // Modals
-  const [docModal, setDocModal] = useState({ open: false, url: "", title: "", docLoading: false });
+  const [docModal, setDocModal] = useState({ open: false, url: "", title: "", docLoading: false, isPdf: false });
   const [decisionModal, setDecisionModal] = useState({ open: false, type: "", user: null });
   const [decisionNotes, setDecisionNotes] = useState("");
   const [aiLoading, setAiLoading] = useState(null);
@@ -77,7 +77,7 @@ export default function VerificationQueue() {
 
   // Fetch document as authenticated blob to avoid 'No token provided'
   const openDocModal = async (userId, type, title) => {
-    setDocModal({ open: true, url: '', title, docLoading: true });
+    setDocModal({ open: true, url: '', title, docLoading: true, isPdf: false });
     try {
       const token = localStorage.getItem('eason_token');
       const res = await fetch(`http://localhost:5000/api/admin/kyc/${userId}/documents?type=${type}`, {
@@ -85,17 +85,18 @@ export default function VerificationQueue() {
       });
       if (!res.ok) throw new Error('Failed to load document');
       const blob = await res.blob();
+      const isPdf = blob.type === 'application/pdf';
       const blobUrl = URL.createObjectURL(blob);
-      setDocModal({ open: true, url: blobUrl, title, docLoading: false });
+      setDocModal({ open: true, url: blobUrl, title, docLoading: false, isPdf });
     } catch (err) {
       toast.error('Failed to load document');
-      setDocModal({ open: false, url: '', title: '', docLoading: false });
+      setDocModal({ open: false, url: '', title: '', docLoading: false, isPdf: false });
     }
   };
 
   const closeDocModal = () => {
     if (docModal.url) URL.revokeObjectURL(docModal.url);
-    setDocModal({ open: false, url: '', title: '', docLoading: false });
+    setDocModal({ open: false, url: '', title: '', docLoading: false, isPdf: false });
   };
 
   // AI Score Gauge Circle
@@ -335,7 +336,11 @@ export default function VerificationQueue() {
                     <p className="text-sm text-gray-500 font-bold uppercase tracking-widest">Loading document...</p>
                   </div>
                 ) : docModal.url ? (
-                  <img src={docModal.url} alt={docModal.title} className="max-h-full max-w-full object-contain rounded-xl shadow-2xl" />
+                  docModal.isPdf ? (
+                    <iframe src={docModal.url} title={docModal.title} className="w-full h-full rounded-xl shadow-2xl bg-white" />
+                  ) : (
+                    <img src={docModal.url} alt={docModal.title} className="max-h-full max-w-full object-contain rounded-xl shadow-2xl" />
+                  )
                 ) : null}
               </div>
             </div>

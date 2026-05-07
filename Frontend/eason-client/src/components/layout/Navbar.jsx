@@ -1,8 +1,9 @@
 // src/components/layout/Navbar.jsx
 // Used ONLY on the public landing page — no auth icons, no cart
 import React, { useState, useEffect, useRef } from "react";
-import { motion, AnimatePresence, useScroll } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
+import { Link, useNavigate } from "react-router-dom";
+const MotionLink = motion(Link);
 import { useAuthStore } from "../../store/authStore";
 import { Menu, X, ChevronDown, Package, User, LogOut } from "lucide-react";
 
@@ -10,16 +11,22 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { isAuthenticated, user, logout } = useAuthStore();
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hovered, setHovered]   = useState(null);
+  const [hovered, setHovered] = useState(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const { scrollY } = useScroll();
 
-  useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 32);
-    window.addEventListener("scroll", handler, { passive: true });
-    return () => window.removeEventListener("scroll", handler);
-  }, []);
+  useMotionValueEvent(scrollY, "change", (latest) => {
+    const previous = scrollY.getPrevious();
+    if (latest > previous && latest > 150) {
+      setHidden(true);
+    } else {
+      setHidden(false);
+    }
+    setScrolled(latest > 32);
+  });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -33,10 +40,10 @@ export default function Navbar() {
   }, []);
 
   const links = [
-    { label: "Marketplace",  to: "/marketplace" },
+    { label: "Marketplace", to: "/marketplace" },
     { label: "How It Works", to: "/how-it-works" },
-    { label: "Sell on eAson",to: "/sell" },
-    { label: "Contact",      to: "/contact" },
+    { label: "Sell on eAson", to: "/sell" },
+    { label: "Contact", to: "/contact" },
   ];
 
   const handleCta = () => navigate(isAuthenticated ? "/marketplace" : "/register");
@@ -47,33 +54,31 @@ export default function Navbar() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-        className={`fixed inset-x-4 top-4 z-50 mx-auto max-w-6xl transition-all duration-700 ${
-          scrolled
-            ? "rounded-2xl bg-white/96 backdrop-blur-2xl shadow-lg shadow-black/5 border border-gray-200"
-            : "rounded-3xl bg-black/30 backdrop-blur-md border border-white/10"
-        }`}
+        className={`fixed inset-x-4 top-4 z-50 mx-auto max-w-6xl transition-all duration-700 ${scrolled
+          ? "rounded-2xl bg-white/96 backdrop-blur-2xl shadow-lg shadow-black/5 border border-gray-200"
+          : "rounded-3xl bg-black/30 backdrop-blur-md border border-white/10"
+          }`}
       >
         <div className="px-6 py-4 flex items-center justify-between">
           {/* Logo */}
-          <motion.button
-            onClick={() => navigate(isAuthenticated ? "/marketplace" : "/")}
+          <MotionLink
+            to={isAuthenticated ? "/marketplace" : "/"}
             whileTap={{ scale: 0.97 }}
-            className={`text-xl font-bold tracking-tight transition-colors ${scrolled ? "text-gray-900" : "text-white"}`}
+            className={`text-xl font-bold tracking-tight transition-colors flex-shrink-0 block ${scrolled ? "text-gray-900" : "text-white"}`}
           >
             eAson<span className="text-emerald-500">.</span>
-          </motion.button>
+          </MotionLink>
 
           {/* Desktop links — centered */}
           <div className="hidden md:flex items-center gap-1 absolute left-1/2 -translate-x-1/2">
             {links.map(link => (
-              <button
+              <Link
                 key={link.label}
-                onClick={() => navigate(link.to)}
+                to={link.to}
                 onMouseEnter={() => setHovered(link.label)}
                 onMouseLeave={() => setHovered(null)}
-                className={`relative px-4 py-2 text-sm font-medium rounded-xl transition-colors ${
-                  scrolled ? "text-gray-500 hover:text-gray-900" : "text-white/60 hover:text-white"
-                }`}
+                className={`relative px-4 py-2 text-sm font-medium rounded-xl transition-colors block ${scrolled ? "text-gray-500 hover:text-gray-900" : "text-white/60 hover:text-white"
+                  }`}
               >
                 {link.label}
                 <AnimatePresence>
@@ -87,21 +92,20 @@ export default function Navbar() {
                     />
                   )}
                 </AnimatePresence>
-              </button>
+              </Link>
             ))}
           </div>
 
           {/* Right CTA */}
           <div className="flex items-center gap-3">
             {!isAuthenticated && (
-              <button
-                onClick={() => navigate("/login")}
-                className={`hidden sm:block text-sm font-medium transition-colors ${
-                  scrolled ? "text-gray-500 hover:text-gray-900" : "text-white/60 hover:text-white"
-                }`}
+              <Link
+                to="/login"
+                className={`hidden sm:block text-sm font-medium transition-colors ${scrolled ? "text-gray-500 hover:text-gray-900" : "text-white/60 hover:text-white"
+                  }`}
               >
                 Sign in
-              </button>
+              </Link>
             )}
 
             {isAuthenticated && user ? (
@@ -161,14 +165,14 @@ export default function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <motion.button
+              <MotionLink
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                onClick={handleCta}
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm"
+                to={isAuthenticated ? "/marketplace" : "/register"}
+                className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-all bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm block text-center"
               >
                 Get Started
-              </motion.button>
+              </MotionLink>
             )}
 
             <button
@@ -192,30 +196,27 @@ export default function Navbar() {
             >
               <div className="px-6 py-4 space-y-1">
                 {links.map(l => (
-                  <button
+                  <Link
                     key={l.label}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      navigate(l.to);
-                    }}
-                    className={`w-full text-left block px-4 py-3 rounded-xl text-sm font-medium transition ${
-                      scrolled ? "text-gray-600 hover:bg-gray-50 hover:text-gray-900" : "text-white/70 hover:bg-white/10 hover:text-white"
-                    }`}
+                    onClick={() => setMenuOpen(false)}
+                    to={l.to}
+                    className={`w-full text-left block px-4 py-3 rounded-xl text-sm font-medium transition ${scrolled ? "text-gray-600 hover:bg-gray-50 hover:text-gray-900" : "text-white/70 hover:bg-white/10 hover:text-white"
+                      }`}
                   >
                     {l.label}
-                  </button>
+                  </Link>
                 ))}
                 <div className="pt-3 border-t border-white/10 flex gap-2">
                   {!isAuthenticated && (
-                    <button onClick={() => { setMenuOpen(false); navigate("/login"); }}
-                      className="flex-1 py-3 border border-white/20 text-white/70 rounded-xl text-sm font-medium">
+                    <Link onClick={() => setMenuOpen(false)} to="/login"
+                      className="flex-1 py-3 border border-white/20 text-white/70 rounded-xl text-sm font-medium block text-center">
                       Sign in
-                    </button>
+                    </Link>
                   )}
-                  <button onClick={() => { setMenuOpen(false); isAuthenticated ? navigate("/marketplace") : handleCta(); }}
-                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-semibold">
+                  <Link onClick={() => setMenuOpen(false)} to={isAuthenticated ? "/marketplace" : "/register"}
+                    className="flex-1 py-3 bg-emerald-600 text-white rounded-xl text-sm font-semibold block text-center">
                     {isAuthenticated ? "Marketplace" : "Get Started"}
-                  </button>
+                  </Link>
                 </div>
               </div>
             </motion.div>

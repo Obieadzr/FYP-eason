@@ -35,11 +35,24 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: [true, "Wholesaler price is required"],
     },
+    
+    discountPercentage: {
+      type: Number,
+      default: 0,
+      min: [0, "Discount cannot be negative"],
+      max: [100, "Discount cannot exceed 100%"]
+    },
 
     retailerPriceOverride: {
       type: Number,
       default: null,
       min: [0, "Retail price cannot be negative"],
+    },
+    
+    suggestedRetailPrice: {
+      type: Number,
+      default: null,
+      min: [0, "Suggested Retail price cannot be negative"],
     },
 
     bulkPricing: [
@@ -50,7 +63,6 @@ const productSchema = new mongoose.Schema(
     ],
     averageRating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
-    images: [{ type: String }],
 
     stock: {
       type: Number,
@@ -87,36 +99,37 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Virtuals
-productSchema.virtual("suggestedRetailPrice").get(function () {
-  const DEFAULT_MULTIPLIER = 1.38; // ~38% margin - can be made category-specific later
-  return Math.round(this.wholesalerPrice * DEFAULT_MULTIPLIER);
-});
-
-productSchema.virtual("consumerPrice").get(function () {
-  return this.retailerPriceOverride || this.suggestedRetailPrice;
-});
-
 // Helper method to return price info based on user role
 productSchema.methods.getPriceForUser = function (user) {
   let info = {};
+  
+  // Calculate discounted wholesaler price if discount exists
+  const discountMultiplier = 1 - ((this.discountPercentage || 0) / 100);
+  const currentWholesalerPrice = Math.round(this.wholesalerPrice * discountMultiplier);
+  
+  // MSRP: user defined or 38% default
+  const msrp = this.suggestedRetailPrice || Math.round(this.wholesalerPrice * 1.38);
+  const currentConsumerPrice = this.retailerPriceOverride || msrp;
 
   if (!user) {
     // Guest / Consumer
     info = {
-      finalPrice: this.consumerPrice,
+      finalPrice: currentConsumerPrice,
+      originalPrice: this.retailerPriceOverride ? null : msrp,
       roleShownAs: "consumer",
     };
   } else if (user.role === "wholesaler") {
     info = {
-      sellingPrice: this.wholesalerPrice,
+      sellingPrice: currentWholesalerPrice,
+      originalPrice: this.discountPercentage > 0 ? this.wholesalerPrice : null,
       baseCost: this.baseCost, // only wholesaler sees cost
       roleShownAs: "wholesaler",
     };
   } else if (user.role === "retailer") {
     info = {
-      purchasePrice: this.wholesalerPrice,
-      suggestedSellingPrice: this.suggestedRetailPrice,
+      purchasePrice: currentWholesalerPrice,
+      originalPrice: this.discountPercentage > 0 ? this.wholesalerPrice : null,
+      suggestedSellingPrice: msrp,
       currentSellingPrice: this.retailerPriceOverride || null,
       roleShownAs: "retailer",
     };
@@ -127,9 +140,10 @@ productSchema.methods.getPriceForUser = function (user) {
     info = {
       baseCost: this.baseCost,
       wholesalerPrice: this.wholesalerPrice,
-      suggestedRetailPrice: this.suggestedRetailPrice,
+      discountedWholesalerPrice: currentWholesalerPrice,
+      suggestedRetailPrice: msrp,
       retailerPriceOverride: this.retailerPriceOverride,
-      consumerPrice: this.consumerPrice,
+      consumerPrice: currentConsumerPrice,
       roleShownAs: "admin",
     };
   }

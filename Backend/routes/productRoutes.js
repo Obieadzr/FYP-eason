@@ -11,6 +11,7 @@ import {
   deleteProduct,
   getMyProducts
 } from "../controllers/productController.js";
+import { getProductRecommendations } from "../controllers/recommendationController.js";
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.put("/:id", optionalAuth, upload.array("images", 20), updateProduct);
 router.get("/my", authMiddleware, getMyProducts);
 router.get("/", getProducts);
 router.get("/:id", getProduct);
+router.get("/:id/recommendations", optionalAuth, getProductRecommendations);
 router.delete("/:id", authMiddleware, deleteProduct);
 
 export default router;

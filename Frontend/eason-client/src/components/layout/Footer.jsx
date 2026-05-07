@@ -145,14 +145,14 @@ export default function Footer() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-white/50 hover:text-white transition-colors"
+                      className="text-sm text-white/50 hover:text-white transition-all relative after:content-[''] after:absolute after:-bottom-0.5 after:left-0 after:w-full after:h-[1px] after:bg-white after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left"
                     >
                       {link.name}
                     </a>
                   ) : (
                     <Link
                       to={link.to}
-                      className="text-sm text-white/50 hover:text-white transition-colors"
+                      className="text-sm text-white/50 hover:text-white transition-all relative after:content-[''] after:absolute after:-bottom-0.5 after:left-0 after:w-full after:h-[1px] after:bg-white after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left"
                     >
                       {link.name}
                     </Link>
@@ -172,7 +172,7 @@ export default function Footer() {
         </div>
         <div className="flex gap-6">
           {[{name:"Privacy Policy", to:"/privacy"}, {name:"Terms of Service", to:"/terms"}, {name:"Sitemap", to:"/sitemap"}].map((l) => (
-            <Link key={l.name} to={l.to} className="text-xs text-white/25 hover:text-white/60 transition">
+            <Link key={l.name} to={l.to} className="text-xs text-white/25 hover:text-white/60 transition-all relative after:content-[''] after:absolute after:-bottom-0.5 after:left-0 after:w-full after:h-[1px] after:bg-white/60 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300 after:origin-left">
               {l.name}
             </Link>
           ))}

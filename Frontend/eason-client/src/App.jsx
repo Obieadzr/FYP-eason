@@ -47,22 +47,32 @@ import Home from "./pages/dashboard/Home.jsx";
 import Categories from "./pages/dashboard/Categories.jsx";
 import Units from "./pages/dashboard/Units.jsx";
 import Products from "./pages/dashboard/Products.jsx";
-import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx"; // renamed to avoid confusion
+import AddProductDashboard from "./pages/dashboard/products/AddProducts.jsx";
 import VerificationQueue from "./pages/dashboard/VerificationQueue.jsx";
 import Users from "./pages/dashboard/Users.jsx";
+import Logistics from "./pages/dashboard/Logistics.jsx";
 
 const NotFound = () => {
   const navigate = useNavigate();
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center p-8">
-        <h1 className="text-8xl font-bold text-gray-900 mb-4">404</h1>
-        <p className="text-2xl text-gray-600 mb-8">Page not found</p>
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white overflow-hidden relative">
+      {/* Noise texture overlay */}
+      <div 
+        className="pointer-events-none absolute inset-0 z-0 opacity-20" 
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }}
+      />
+      {/* Glow */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#10b981] opacity-[0.03] rounded-full blur-3xl z-0" />
+
+      <div className="relative z-10 text-center max-w-lg px-6" style={{ fontFamily: "DM Sans, sans-serif" }}>
+        <h1 className="text-[120px] font-bold leading-none tracking-tighter text-white mb-2">404</h1>
+        <p className="text-xl text-white/50 mb-10 tracking-tight">This page has been discontinued or moved.</p>
+        
         <button
           onClick={() => navigate("/")}
-          className="inline-block px-10 py-5 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition shadow-lg"
+          className="group flex items-center gap-3 mx-auto px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full text-sm font-medium text-white transition-all duration-300 backdrop-blur-md"
         >
-          Back to Home
+          Return to Hub
         </button>
       </div>
     </div>
@@ -207,6 +217,16 @@ function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <DashboardLayout>
                 <Users />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard/logistics"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <DashboardLayout>
+                <Logistics />
               </DashboardLayout>
             </ProtectedRoute>
           }

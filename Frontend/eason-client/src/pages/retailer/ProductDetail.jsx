@@ -12,7 +12,9 @@ import toast from "react-hot-toast";
 import API from "../../utils/api";
 import { useCart } from "../../context/CartContext.jsx";
 import { useAuthStore } from "../../store/authStore.js";
+import { useChat } from "../../store/useChat.js";
 import ReviewSection from "./ReviewSection.jsx";
+import RecommendationCarousel from "../../components/products/RecommendationCarousel.jsx";
 
 /* ─── Sticky navbar that starts transparent and becomes solid on scroll ─── */
 function StickyNav() {
@@ -26,11 +28,10 @@ function StickyNav() {
   }, []);
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        solid
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${solid
           ? "bg-white/95 backdrop-blur-xl border-b border-gray-100 shadow-sm"
           : "bg-transparent"
-      }`}
+        }`}
     >
       <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
         <button
@@ -112,6 +113,7 @@ export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { startChat } = useChat();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -124,7 +126,7 @@ export default function ProductDetail() {
 
   const availableVariants = useMemo(() => {
     if (!product?.attributes) return [];
-    
+
     // Determine which array-based attributes represent selectable options.
     const variantKeys = ['color', 'sizes', 'shade', 'dyeShade', 'flavor', 'flavorOrVariant', 'size'];
     return Object.entries(product.attributes)
@@ -169,7 +171,7 @@ export default function ProductDetail() {
   const getDisplayPrice = () => {
     let basePrice = product.wholesalerPrice || product.price || 0;
     const info = product.priceInfo || {};
-    
+
     if (!user) basePrice = info.finalPrice || basePrice;
     else if (user.role === "retailer") basePrice = info.purchasePrice || basePrice;
     else if (user.role === "wholesaler") basePrice = info.sellingPrice || basePrice;
@@ -212,7 +214,7 @@ export default function ProductDetail() {
   const handleWishlistToggle = async () => {
     const newVal = !inWishlist;
     setInWishlist(newVal);
-    
+
     if (user) {
       try {
         await API.post('/wishlist/toggle', { productId: product._id });
@@ -230,6 +232,26 @@ export default function ProductDetail() {
   };
 
   const isOutOfStock = product?.stock === 0;
+
+  const thumbnails = useMemo(() => {
+    return product?.images?.length > 0
+      ? product.images.map(img => `http://localhost:5000${img}`)
+      : product?.image
+        ? [`http://localhost:5000${product.image}`]
+        : [];
+  }, [product]);
+
+  useEffect(() => {
+    if (thumbnails.length <= 1) return;
+    const interval = setInterval(() => {
+      setSelectedImage(prev => {
+        const idx = thumbnails.indexOf(prev);
+        if (idx === -1) return thumbnails[0];
+        return thumbnails[(idx + 1) % thumbnails.length];
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [thumbnails]);
 
   /* ─── Loading ──────────────────────────────────────────────────────────── */
   if (loading) {
@@ -255,14 +277,6 @@ export default function ProductDetail() {
     );
   }
 
-  const thumbnails = product?.images?.length > 0
-    ? product.images.map(img => `http://localhost:5000${img}`)
-    : [
-        `http://localhost:5000${product.image}`,
-        `http://localhost:5000${product.image}`,
-        `http://localhost:5000${product.image}`,
-      ];
-
   /* ─── Page ─────────────────────────────────────────────────────────────── */
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Inter', sans-serif", letterSpacing: "-0.01em" }}>
@@ -280,16 +294,6 @@ export default function ProductDetail() {
           <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200" />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-white" />
-        {/* Breadcrumb */}
-        <div className="absolute bottom-6 left-6 right-6 max-w-screen-xl mx-auto">
-          <div className="flex items-center gap-2 text-xs text-white/60">
-            <Link to="/" className="hover:text-white transition">Home</Link>
-            <span>/</span>
-            <Link to="/marketplace" className="hover:text-white transition">Marketplace</Link>
-            <span>/</span>
-            <span className="text-white/90">{product.name}</span>
-          </div>
-        </div>
       </div>
 
       {/* ── 2-column layout ── */}
@@ -299,40 +303,44 @@ export default function ProductDetail() {
           {/* LEFT — Images */}
           <div className="sticky top-24">
             {/* Main image */}
-            <motion.div
-              key={selectedImage}
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3 }}
-              className="aspect-square bg-[#f5f5f5] rounded-3xl overflow-hidden mb-4 shadow-xl"
-            >
-              {product.image ? (
-                <img
-                  src={selectedImage}
-                  alt={product.name}
-                  className="w-full h-full object-contain p-8"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Package className="w-20 h-20 text-gray-300" />
-                </div>
-              )}
-            </motion.div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={selectedImage}
+                initial={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+                animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="aspect-square bg-[#f5f5f5] rounded-3xl overflow-hidden mb-4 shadow-xl"
+              >
+                {product.image ? (
+                  <img
+                    src={selectedImage}
+                    alt={product.name}
+                    className="w-full h-full object-contain p-8"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Package className="w-20 h-20 text-gray-300" />
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
 
             {/* Thumbnails */}
-            <div className="flex gap-3">
-              {thumbnails.map((src, i) => (
-                <button
-                  key={i}
-                  onClick={() => setSelectedImage(src)}
-                  className={`flex-1 aspect-square rounded-2xl overflow-hidden border-2 transition ${
-                    selectedImage === src ? "border-black" : "border-transparent bg-[#f5f5f5] hover:border-gray-300"
-                  }`}
-                >
-                  <img src={src} alt={`view-${i}`} className="w-full h-full object-contain p-3" />
-                </button>
-              ))}
-            </div>
+            {thumbnails.length > 1 && (
+              <div className="flex gap-3">
+                {thumbnails.map((src, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedImage(src)}
+                    className={`flex-1 aspect-square rounded-2xl overflow-hidden border-2 transition ${selectedImage === src ? "border-black" : "border-transparent bg-[#f5f5f5] hover:border-gray-300"
+                      }`}
+                  >
+                    <img src={src} alt={`view-${i}`} className="w-full h-full object-contain p-3" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* RIGHT — Details */}
@@ -355,8 +363,20 @@ export default function ProductDetail() {
 
             {/* Price */}
             <div className="space-y-1">
-              <div className="text-2xl font-bold text-gray-900">
-                Rs {Number(getDisplayPrice()).toLocaleString()}
+              <div className="flex items-center gap-3">
+                <span className="text-3xl font-bold text-gray-900">
+                  Rs {Number(getDisplayPrice()).toLocaleString()}
+                </span>
+                {product.priceInfo?.originalPrice && product.discountPercentage > 0 && (
+                  <span className="text-xl text-gray-400 line-through font-medium">
+                    Rs {Number(product.priceInfo.originalPrice).toLocaleString()}
+                  </span>
+                )}
+                {product.discountPercentage > 0 && (
+                  <span className="bg-rose-500 text-white text-xs font-bold px-2 py-1 rounded">
+                    -{product.discountPercentage}%
+                  </span>
+                )}
               </div>
               <p className="text-xs text-gray-400">
                 {!user ? "Public price" : user.role === "retailer" ? "Your purchase price · incl. all taxes" : "Your selling price"}
@@ -416,46 +436,44 @@ export default function ProductDetail() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium text-gray-900">{variant.label}</span>
                       <span className="text-xs font-semibold text-emerald-600">
-                        {selectedVariants[variant.key] ? 
-                          (typeof selectedVariants[variant.key] === 'object' ? selectedVariants[variant.key].name : selectedVariants[variant.key]) 
+                        {selectedVariants[variant.key] ?
+                          (typeof selectedVariants[variant.key] === 'object' ? selectedVariants[variant.key].name : selectedVariants[variant.key])
                           : "Select an option"}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                       {variant.options.map((opt, i) => {
-                         const isColor = typeof opt === 'object' && opt.hex;
-                         const isSelected = selectedVariants[variant.key] === opt || 
-                                          (isColor && selectedVariants[variant.key]?.hex === opt.hex);
-                         
-                         if (isColor) {
-                           return (
-                             <button
-                               key={opt.hex}
-                               onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
-                               title={opt.name}
-                               className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${
-                                 isSelected ? "border-black scale-110 shadow-md p-1" : "border-transparent hover:scale-105"
-                               }`}
-                             >
-                               <span className="w-full h-full rounded-full border border-gray-200" style={{ backgroundColor: opt.hex }} />
-                             </button>
-                           );
-                         }
+                      {variant.options.map((opt, i) => {
+                        const isColor = typeof opt === 'object' && opt.hex;
+                        const isSelected = selectedVariants[variant.key] === opt ||
+                          (isColor && selectedVariants[variant.key]?.hex === opt.hex);
 
-                         return (
-                           <button
-                             key={opt}
-                             onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
-                             className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                               isSelected
-                                 ? "bg-black text-white shadow-md border-black"
-                                 : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-transparent"
-                             } border`}
-                           >
-                             {opt}
-                           </button>
-                         );
-                       })}
+                        if (isColor) {
+                          return (
+                            <button
+                              key={opt.hex}
+                              onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
+                              title={opt.name}
+                              className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center ${isSelected ? "border-black scale-110 shadow-md p-1" : "border-transparent hover:scale-105"
+                                }`}
+                            >
+                              <span className="w-full h-full rounded-full border border-gray-200" style={{ backgroundColor: opt.hex }} />
+                            </button>
+                          );
+                        }
+
+                        return (
+                          <button
+                            key={opt}
+                            onClick={() => setSelectedVariants(prev => ({ ...prev, [variant.key]: opt }))}
+                            className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${isSelected
+                                ? "bg-black text-white shadow-md border-black"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 border-transparent"
+                              } border`}
+                          >
+                            {opt}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -487,13 +505,12 @@ export default function ProductDetail() {
                   whileTap={{ scale: 0.98 }}
                   onClick={handleAddToCart}
                   disabled={isOutOfStock}
-                  className={`w-full py-4 rounded-full text-sm font-semibold transition ${
-                    isOutOfStock
+                  className={`w-full py-4 rounded-full text-sm font-semibold transition ${isOutOfStock
                       ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                       : addedToCart
-                      ? "bg-emerald-600 text-white"
-                      : "bg-black text-white hover:bg-gray-900"
-                  }`}
+                        ? "bg-emerald-600 text-white"
+                        : "bg-black text-white hover:bg-gray-900"
+                    }`}
                 >
                   {addedToCart ? "✓ Added to Cart" : isOutOfStock ? "Out of Stock" : "Add to Bag"}
                 </motion.button>
@@ -519,12 +536,12 @@ export default function ProductDetail() {
 
                 {/* Negotiate */}
                 {product.wholesaler?._id && (
-                  <ChatButton 
-                    wholesalerId={product.wholesaler._id} 
-                    productId={product._id} 
-                    label="Make an Offer / Request Quote"
-                    className="w-full justify-center py-4 rounded-full text-sm bg-transparent border-dashed border-2 border-emerald-500 text-emerald-700 font-bold hover:bg-emerald-50 transition flex items-center gap-2" 
-                  />
+                  <button
+                    onClick={() => startChat({ wholesalerId: product.wholesaler._id, productId: product._id })}
+                    className="w-full py-4 rounded-full text-sm border-dashed border-2 border-emerald-600 bg-transparent text-emerald-700 font-bold hover:bg-emerald-50 transition flex items-center justify-center gap-2"
+                  >
+                    💬 Make an Offer / Request Quote
+                  </button>
                 )}
               </div>
             )}
@@ -576,10 +593,10 @@ export default function ProductDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-0">
               {Object.entries(product.attributes).map(([key, value]) => {
                 if (value === "" || value === null || (Array.isArray(value) && value.length === 0)) return null;
-                
+
                 // Format label: camelCase to Title Case
                 const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                
+
                 let displayValue = value;
                 if (typeof value === 'boolean') {
                   displayValue = <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[10px] font-bold uppercase tracking-wider">{value ? "Yes" : "No"}</span>;
@@ -589,21 +606,21 @@ export default function ProductDetail() {
                       <div className="flex flex-wrap gap-2">
                         {value.map(c => (
                           <span key={c.hex} title={c.name} className="flex items-center gap-1.5 text-xs bg-gray-50 border border-gray-200 px-2 py-1 rounded-md">
-                            <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: c.hex }}/>
+                            <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: c.hex }} />
                             {c.name}
                           </span>
                         ))}
                       </div>
                     );
                   } else {
-                     displayValue = (
-                       <div className="flex flex-wrap gap-1.5">
-                         {value.map(v => <span key={v} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-md font-medium">{v}</span>)}
-                       </div>
-                     );
+                    displayValue = (
+                      <div className="flex flex-wrap gap-1.5">
+                        {value.map(v => <span key={v} className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-md font-medium">{v}</span>)}
+                      </div>
+                    );
                   }
                 } else {
-                   displayValue = String(value);
+                  displayValue = String(value);
                 }
 
                 return (
@@ -647,7 +664,7 @@ export default function ProductDetail() {
               </div>
             </div>
             {product.wholesaler?._id && (
-              <button 
+              <button
                 onClick={() => navigate(`/supplier/${product.wholesaler._id}`)}
                 className="w-full md:w-auto px-6 py-3.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-900 transition shrink-0 mt-4 md:mt-0"
               >
@@ -664,6 +681,9 @@ export default function ProductDetail() {
             <p className="text-gray-600 text-sm leading-7 max-w-2xl">{product.description}</p>
           </section>
         )}
+
+        {/* ── Recommendations ── */}
+        <RecommendationCarousel productId={product._id} />
 
         {/* ── Reviews ── */}
         <ReviewSection productId={product._id} />
