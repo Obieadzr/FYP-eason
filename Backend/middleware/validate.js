@@ -4,9 +4,13 @@ export const validate = (schema) => (req, res, next) => {
     req.body = parsed; // optional: overwrite req.body with parsed/sanitized data
     next();
   } catch (err) {
-    return res.status(400).json({
-      message: "Validation Error",
-      errors: err.errors.map(e => ({ path: e.path.join('.'), message: e.message }))
-    });
+    if (err.issues) {
+      return res.status(400).json({
+        message: "Validation Error",
+        errors: err.issues.map(e => ({ path: e.path.join('.'), message: e.message }))
+      });
+    }
+    console.error("Validation threw non-Zod error:", err);
+    return res.status(500).json({ message: "Internal Validation Error", error: err.message });
   }
 };

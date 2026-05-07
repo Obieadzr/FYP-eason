@@ -1,4 +1,4 @@
-// src/pages/auth/Profile.jsx
+﻿// src/pages/auth/Profile.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -39,12 +39,12 @@ function StatCard({ icon: Icon, label, value, alert }) {
 function ProductModal({ product, categories, onClose, onSave }) {
   const isEdit = !!product?._id;
   const [form, setForm] = useState({
-    name:        product?.name        || "",
+    name: product?.name || "",
     description: product?.description || "",
-    price:       product?.price       || product?.wholesalerPrice || "",
-    stock:       product?.stock       || "",
-    category:    product?.category?._id || product?.category || "",
-    image:       null,
+    price: product?.price || product?.wholesalerPrice || "",
+    stock: product?.stock || "",
+    category: product?.category?._id || product?.category || "",
+    image: null,
     bulkPricing: product?.bulkPricing || [],
   });
   const [loading, setLoading] = useState(false);
@@ -65,14 +65,14 @@ function ProductModal({ product, categories, onClose, onSave }) {
     setLoading(true);
     try {
       const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { 
+      Object.entries(form).forEach(([k, v]) => {
         if (v !== null && v !== "") {
           if (k === "bulkPricing") {
-             fd.append(k, JSON.stringify(v));
+            fd.append(k, JSON.stringify(v));
           } else {
-             fd.append(k, v);
+            fd.append(k, v);
           }
-        } 
+        }
       });
       if (isEdit) {
         await API.put(`/products/${product._id}`, fd);
@@ -122,9 +122,9 @@ function ProductModal({ product, categories, onClose, onSave }) {
                 {preview
                   ? <img src={preview} alt="preview" className="w-full h-full object-contain p-2" />
                   : <div className="text-center">
-                      <Image className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                      <p className="text-xs text-gray-400">Click to upload image</p>
-                    </div>
+                    <Image className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-xs text-gray-400">Click to upload image</p>
+                  </div>
                 }
               </div>
               <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
@@ -166,8 +166,8 @@ function ProductModal({ product, categories, onClose, onSave }) {
           <div className="border border-gray-100 rounded-2xl p-4 bg-gray-50/50">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">Bulk Pricing Tiers (Optional)</label>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setForm({ ...form, bulkPricing: [...form.bulkPricing, { minQuantity: "", pricePerUnit: "" }] })}
                 className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
               >
@@ -176,31 +176,31 @@ function ProductModal({ product, categories, onClose, onSave }) {
             </div>
             {form.bulkPricing.map((tier, index) => (
               <div key={index} className="flex gap-3 mb-3 items-center">
-                <input 
-                  type="number" 
-                  min="2" 
-                  placeholder="Min Qty (e.g. 100)" 
-                  value={tier.minQuantity} 
+                <input
+                  type="number"
+                  min="2"
+                  placeholder="Min Qty (e.g. 100)"
+                  value={tier.minQuantity}
                   onChange={e => {
                     const newTiers = [...form.bulkPricing];
                     newTiers[index].minQuantity = Number(e.target.value);
                     setForm({ ...form, bulkPricing: newTiers });
-                  }} 
-                  className={inputCls} 
+                  }}
+                  className={inputCls}
                 />
-                <input 
-                  type="number" 
-                  placeholder="Price (e.g. 2300)" 
-                  value={tier.pricePerUnit} 
+                <input
+                  type="number"
+                  placeholder="Price (e.g. 2300)"
+                  value={tier.pricePerUnit}
                   onChange={e => {
                     const newTiers = [...form.bulkPricing];
                     newTiers[index].pricePerUnit = Number(e.target.value);
                     setForm({ ...form, bulkPricing: newTiers });
-                  }} 
-                  className={inputCls} 
+                  }}
+                  className={inputCls}
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setForm({ ...form, bulkPricing: form.bulkPricing.filter((_, i) => i !== index) })}
                   className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition"
                 >
@@ -231,7 +231,7 @@ function ProductModal({ product, categories, onClose, onSave }) {
 export default function Profile() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const [tab, setTab] = useState("overview"); 
+  const [tab, setTab] = useState("overview");
   const isWholesaler = user?.role === "wholesaler";
 
   const [products, setProducts] = useState([]);
@@ -258,7 +258,7 @@ export default function Profile() {
         setOrders(orderRes.data?.orders || orderRes.data || []);
         setCategories(catRes.data || []);
         setWallet(walletRes.data?.wallet || null);
-        
+
         if (isWholesaler) {
           const prodRes = await API.get("/products/my").catch(() => ({ data: [] }));
           setProducts(prodRes.data.products || prodRes.data || []);
@@ -320,23 +320,23 @@ export default function Profile() {
 
   const tabs = isWholesaler
     ? [
-        { id: "overview", label: "Overview", icon: LayoutDashboard },
-        { id: "products", label: "Products", icon: Package },
-        { id: "orders", label: "Sales", icon: TrendingUp },
-        { id: "wallet", label: "eAson Wallet", icon: DollarSign },
-        { id: "settings", label: "Settings", icon: Settings }
-      ]
+      { id: "overview", label: "Overview", icon: LayoutDashboard },
+      { id: "products", label: "Products", icon: Package },
+      { id: "orders", label: "Sales", icon: TrendingUp },
+      { id: "wallet", label: "eAson Wallet", icon: DollarSign },
+      { id: "settings", label: "Settings", icon: Settings }
+    ]
     : [
-        { id: "orders", label: "My Orders", icon: ShoppingBag },
-        { id: "settings", label: "Settings", icon: Settings }
-      ];
+      { id: "orders", label: "My Orders", icon: ShoppingBag },
+      { id: "settings", label: "Settings", icon: Settings }
+    ];
 
   const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(search.toLowerCase()));
-  
+
   // Stats calculation
   const totalStock = products.reduce((s, p) => s + (p.stock || 0), 0);
   const lowStockItems = products.filter(p => (p.stock || 0) < 10 && (p.stock || 0) > 0).length;
-  
+
   const currentMonth = new Date().getMonth();
   const ordersThisMonth = orders.filter(o => new Date(o.createdAt).getMonth() === currentMonth).length;
 
@@ -344,7 +344,7 @@ export default function Profile() {
     const grouped = {};
     const msInDay = 24 * 60 * 60 * 1000;
     const now = new Date();
-    for(let i=6; i>=0; i--) {
+    for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getTime() - i * msInDay);
       grouped[d.toLocaleDateString("en-US", { month: "short", day: "numeric" })] = 0;
     }
@@ -353,10 +353,10 @@ export default function Profile() {
       const d = new Date(o.createdAt);
       const diffDays = Math.floor((now - d) / msInDay);
       if (diffDays <= 6) {
-         const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-         if (grouped[dateStr] !== undefined) {
-           grouped[dateStr] += (o.totalAmount || 0);
-         }
+        const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        if (grouped[dateStr] !== undefined) {
+          grouped[dateStr] += (o.totalAmount || 0);
+        }
       }
     });
     return Object.keys(grouped).map(date => ({ name: date, Revenue: grouped[date] }));
@@ -406,7 +406,7 @@ export default function Profile() {
       <Navbar />
 
       <div className="max-w-screen-2xl mx-auto flex flex-col lg:flex-row min-h-screen pt-24 px-4 sm:px-6">
-        
+
         {/* LEFT SIDEBAR */}
         <aside className="w-full lg:w-72 shrink-0 mb-8 lg:mb-0 lg:fixed lg:h-[calc(100vh-8rem)]">
           <div className="bg-white/90 backdrop-blur-xl border-r border-white/50 shadow-lg rounded-2xl h-full flex flex-col">
@@ -419,7 +419,7 @@ export default function Profile() {
               </div>
               <h2 className="mt-4 text-xl font-bold text-gray-900">{fullName}</h2>
               <p className="text-sm text-gray-500 mb-3">{user.email}</p>
-              
+
               {isWholesaler && (
                 <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1 rounded-full">
                   <CheckCircle2 className="w-4 h-4" /> Verified Supplier
@@ -433,11 +433,10 @@ export default function Profile() {
                   key={t.id}
                   whileHover={{ x: 4 }}
                   onClick={() => setTab(t.id)}
-                  className={`w-[calc(100%-24px)] flex items-center gap-3 px-4 py-3 mx-3 font-medium text-sm transition-all ${
-                    tab === t.id
+                  className={`w-[calc(100%-24px)] flex items-center gap-3 px-4 py-3 mx-3 font-medium text-sm transition-all ${tab === t.id
                       ? "bg-emerald-600 text-white rounded-xl shadow-md shadow-emerald-200"
                       : "text-gray-600 hover:bg-gray-100 rounded-xl"
-                  }`}
+                    }`}
                 >
                   <t.icon className="w-5 h-5" />
                   {t.label}
@@ -457,12 +456,12 @@ export default function Profile() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.4 }}
             >
-              
+
               {/* OVERVIEW TAB */}
               {tab === "overview" && isWholesaler && (
                 <div className="space-y-8">
                   <h1 className="text-2xl font-bold text-gray-900">Dashboard Overview</h1>
-                  
+
                   {lowStockItems > 0 && (
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between shadow-sm">
                       <div className="flex items-center gap-3">
@@ -502,7 +501,7 @@ export default function Profile() {
                           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                           <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} dy={10} />
                           <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#9ca3af" }} tickFormatter={(val) => `Rs${val}`} dx={-10} />
-                          <Tooltip 
+                          <Tooltip
                             contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                             formatter={(value) => [`Rs ${value.toLocaleString()}`, "Revenue"]}
                           />
@@ -654,7 +653,7 @@ export default function Profile() {
               {tab === "orders" && (
                 <div className="space-y-6">
                   <h1 className="text-2xl font-bold text-gray-900">{isWholesaler ? "Sales History" : "My Orders"}</h1>
-                  
+
                   {orders.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-white rounded-2xl border border-gray-100 shadow-sm">
                       <div className="w-20 h-20 rounded-full bg-gray-50 flex items-center justify-center mb-6">
@@ -680,8 +679,8 @@ export default function Profile() {
                           <tbody className="divide-y divide-gray-100">
                             {orders.map(o => (
                               <tr key={o._id} className="hover:bg-gray-50 transition">
-                                <td 
-                                  className="py-4 px-6 font-medium text-gray-900 cursor-pointer" 
+                                <td
+                                  className="py-4 px-6 font-medium text-gray-900 cursor-pointer"
                                   onClick={() => setSelectedOrder(o)}
                                 >
                                   #{o._id?.slice(-8).toUpperCase()}
@@ -717,10 +716,10 @@ export default function Profile() {
                                     >
                                       <MessageCircle className="w-4 h-4" />
                                     </button>
-                                    
+
                                     {o.status === "delivered" && (
-                                      <button 
-                                        onClick={() => generateInvoice(o, isWholesaler ? "wholesaler" : "retailer")} 
+                                      <button
+                                        onClick={() => generateInvoice(o, isWholesaler ? "wholesaler" : "retailer")}
                                         title="Download Invoice"
                                         className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
                                       >
@@ -729,8 +728,8 @@ export default function Profile() {
                                     )}
 
                                     {!isWholesaler && (o.status === "delivered" || o.status === "cancelled") && (
-                                      <button 
-                                        onClick={() => handleReorder(o)} 
+                                      <button
+                                        onClick={() => handleReorder(o)}
                                         title="Reorder Items"
                                         className="p-2 text-gray-700 hover:text-black hover:bg-gray-100 rounded-lg transition flex items-center gap-1.5 font-semibold text-xs border border-gray-200"
                                       >
@@ -773,7 +772,7 @@ export default function Profile() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
                     <h3 className="text-lg font-bold text-gray-900 mb-6">Recent Transactions</h3>
                     {wallet?.transactions?.length > 0 ? (
@@ -809,7 +808,7 @@ export default function Profile() {
               {tab === "settings" && (
                 <div className="space-y-6 max-w-3xl">
                   <h1 className="text-2xl font-bold text-gray-900">Account Settings</h1>
-                  
+
                   <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm space-y-6">
                     <h2 className="text-lg font-bold text-gray-900 border-b border-gray-100 pb-4">Account Info</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -849,7 +848,7 @@ export default function Profile() {
                   <div className="bg-rose-50 p-8 rounded-2xl border border-rose-100 space-y-4">
                     <h2 className="text-lg font-bold text-rose-900">Danger Zone</h2>
                     <p className="text-sm text-rose-700">Ready to wrap up for the day?</p>
-                    <button 
+                    <button
                       onClick={() => { logout(); navigate("/"); }}
                       className="px-6 py-2.5 bg-rose-600 text-white font-medium rounded-xl hover:bg-rose-700 transition flex items-center gap-2"
                     >
@@ -886,7 +885,7 @@ export default function Profile() {
               </button>
               <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
               <p className="text-sm text-gray-500 mb-6 font-medium tracking-wide">#{selectedOrder._id?.slice(-8).toUpperCase()}</p>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 <div className="bg-gray-50 p-5 rounded-2xl border border-gray-100">
                   <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Order Status</p>
@@ -939,7 +938,7 @@ export default function Profile() {
                 <p className="text-lg text-gray-500 font-bold uppercase tracking-wider">Grand Total</p>
                 <p className="text-3xl font-black text-emerald-600 drop-shadow-sm">Rs {Number(selectedOrder.grandTotal || selectedOrder.totalAmount || 0).toLocaleString()}</p>
               </div>
-              
+
               <div className="mt-8 flex gap-3 justify-end flex-wrap">
                 {(selectedOrder.status === "pending" || selectedOrder.status === "processing") && (
                   <button onClick={() => { handleCancelOrder(selectedOrder._id); setSelectedOrder(null); }} className="px-6 py-3 bg-white border-2 border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-50 hover:border-red-200 transition flex items-center gap-2">
@@ -952,7 +951,7 @@ export default function Profile() {
                     <Truck className="w-4 h-4" /> Mark as Sent
                   </button>
                 )}
-                
+
                 {!isWholesaler && (selectedOrder.status === "delivered" || selectedOrder.status === "cancelled") && (
                   <button onClick={() => { handleReorder(selectedOrder); setSelectedOrder(null); }} className="px-6 py-3 bg-white border-2 border-gray-200 text-gray-900 font-bold rounded-xl hover:bg-gray-50 transition flex items-center gap-2">
                     <Package className="w-4 h-4" /> Reorder Items

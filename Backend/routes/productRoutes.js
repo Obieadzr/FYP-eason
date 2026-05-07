@@ -30,8 +30,8 @@ const optionalAuth = (req, res, next) => {
   next();
 };
 
-router.post("/", optionalAuth, upload.array("images", 20), createProduct);
-router.put("/:id", optionalAuth, upload.array("images", 20), updateProduct);
+router.post("/", authMiddleware, upload.array("images", 20), createProduct);
+router.put("/:id", authMiddleware, upload.array("images", 20), updateProduct);
 
 router.get("/my", authMiddleware, getMyProducts);
 router.get("/", getProducts);

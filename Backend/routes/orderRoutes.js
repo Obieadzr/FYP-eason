@@ -100,22 +100,35 @@ router.get("/", authMiddleware, async (req, res) => {
 router.put("/:id/status", authMiddleware, async (req, res) => {
   const { status } = req.body;
 
-  if (!["admin", "wholesaler"].includes(req.user.role)) {
-    if (req.user.role === "retailer" && status === "delivered") {
-      // Allowed — retailer can confirm delivery
-    } else {
-      return res.status(403).json({ success: false, message: "Not authorized. Retailers can only verify delivery." });
-    }
-  }
-
   const validStatuses = ["pending", "accepted", "processing", "shipped", "delivered", "cancelled"];
   if (!validStatuses.includes(status)) {
     return res.status(400).json({ success: false, message: "Invalid status value" });
   }
 
   try {
-    const currentOrder = await Order.findById(req.params.id);
+    // Populate items.product to access the wholesaler field
+    const currentOrder = await Order.findById(req.params.id).populate("items.product");
     if (!currentOrder) return res.status(404).json({ success: false, message: "Order not found" });
+
+    // Enforce Authorization (IDOR fixes)
+    if (req.user.role === "retailer") {
+      if (currentOrder.user.toString() !== req.user.id) {
+        return res.status(403).json({ success: false, message: "Not authorized to update this order" });
+      }
+      if (status !== "delivered") {
+        return res.status(403).json({ success: false, message: "Retailers can only verify delivery." });
+      }
+    } else if (req.user.role === "wholesaler") {
+      // Ensure the wholesaler has at least one product in this order
+      const ownsProduct = currentOrder.items.some(
+        (item) => item.product && item.product.wholesaler.toString() === req.user.id
+      );
+      if (!ownsProduct) {
+        return res.status(403).json({ success: false, message: "Not authorized to update this order" });
+      }
+    } else if (req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Not authorized" });
+    }
 
     currentOrder.status = status;
 

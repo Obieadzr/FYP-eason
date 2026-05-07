@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
-const MotionLink = motion(Link);
+const MotionLink = motion.create(Link);
 import { useAuthStore } from "../../store/authStore";
 import { Menu, X, ChevronDown, Package, User, LogOut } from "lucide-react";
 

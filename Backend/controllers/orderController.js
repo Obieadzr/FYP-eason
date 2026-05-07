@@ -23,6 +23,10 @@ export const createOrder = async (req, res) => {
 
     // Atomic stock decrement — uses $inc with $gte guard to prevent overselling
     for (const cartItem of items) {
+      if (typeof cartItem.quantity !== 'number' || !Number.isInteger(cartItem.quantity) || cartItem.quantity <= 0) {
+        return res.status(400).json({ success: false, message: "Invalid quantity for item" });
+      }
+
       const updated = await Product.findOneAndUpdate(
         { _id: cartItem._id, stock: { $gte: cartItem.quantity } },
         { $inc: { stock: -cartItem.quantity } },

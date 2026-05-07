@@ -19,6 +19,13 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    if (typeof name !== 'string') {
+      return res.status(400).json({ message: "Name must be a string" });
+    }
+    if (description !== undefined && typeof description !== 'string') {
+      return res.status(400).json({ message: "Description must be a string" });
+    }
+
     const baseCostNum = Number(baseCost);
     const wholesalerPriceNum = Number(wholesalerPrice);
 
@@ -78,15 +85,29 @@ export const createProduct = async (req, res) => {
 
 export const updateProduct = async (req, res) => {
   try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Enforce ownership
+    if (product.wholesaler.toString() !== req.user.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to update this product" });
+    }
+
     const { name, category, unit, baseCost, wholesalerPrice, stock, description, attributes, bulkPricing } = req.body;
 
     const updateData = {};
 
-    if (name !== undefined) updateData.name = name.trim();
+    if (name !== undefined) {
+      if (typeof name !== 'string') return res.status(400).json({ message: "Name must be a string" });
+      updateData.name = name.trim();
+    }
     if (category) updateData.category = category;
     if (unit) updateData.unit = unit;
     if (stock !== undefined) updateData.stock = Number(stock) || 0;
-    if (description !== undefined) updateData.description = description.trim() || "";
+    if (description !== undefined) {
+      if (typeof description !== 'string') return res.status(400).json({ message: "Description must be a string" });
+      updateData.description = description.trim() || "";
+    }
     if (attributes !== undefined) {
       try {
         updateData.attributes = typeof attributes === 'string' ? JSON.parse(attributes) : attributes;
@@ -105,8 +126,7 @@ export const updateProduct = async (req, res) => {
 
     // Handle price updates
     if (baseCost !== undefined || wholesalerPrice !== undefined) {
-      const product = await Product.findById(req.params.id);
-      if (!product) return res.status(404).json({ message: "Product not found" });
+
 
       const newBaseCost = baseCost !== undefined ? Number(baseCost) : product.baseCost;
       const newWholesalerPrice = wholesalerPrice !== undefined ? Number(wholesalerPrice) : product.wholesalerPrice;
@@ -128,9 +148,7 @@ export const updateProduct = async (req, res) => {
     // Image handling
     // Image handling - replacing all images with new ones if new files are uploaded
     if (req.files && req.files.length > 0) {
-      const product = await Product.findById(req.params.id);
-      if (product) {
-        // Delete all old images if they exist
+      // Delete all old images if they exist
         const allOldImages = product.images?.length > 0 ? product.images : (product.image ? [product.image] : []);
         for (const oldImg of allOldImages) {
           const oldPath = path.join(__dirname, "..", oldImg);
@@ -140,7 +158,6 @@ export const updateProduct = async (req, res) => {
             console.warn("Old image delete failed:", err.message);
           }
         }
-      }
       const newPaths = req.files.map(file => `/uploads/${file.filename}`);
       updateData.image = newPaths[0];
       updateData.images = newPaths;
@@ -226,6 +243,11 @@ export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Enforce ownership
+    if (product.wholesaler.toString() !== req.user.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to delete this product" });
+    }
 
     if (product.image) {
       const imagePath = path.join(__dirname, "..", product.image);

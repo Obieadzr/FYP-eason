@@ -8,8 +8,8 @@ export const createReview = async (req, res) => {
     const { productId } = req.params;
     const userId = req.user.id || req.user._id;
 
-    if (!rating || rating < 1 || rating > 5) {
-      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be a number between 1 and 5" });
     }
 
     // Verify if user bought the product

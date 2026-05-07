@@ -9,7 +9,7 @@ export const registerUser = async (req, res) => {
   try {
     console.log("Register request body:", req.body);
 
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password, role, businessName } = req.body;
 
     // Basic required fields check
     if (!firstName || !lastName || !email || !password) {
@@ -44,21 +44,30 @@ export const registerUser = async (req, res) => {
         existingUser.firstName = firstName;
         existingUser.lastName = lastName;
         existingUser.password = hashedPassword;
-        existingUser.role = role || "retailer";
-        existingUser.verified = (role || "retailer") === "wholesaler" ? false : true;
+        
+        // Fix Privilege Escalation: Constrain roles to wholesaler or retailer
+        const safeRole = role === "wholesaler" ? "wholesaler" : "retailer";
+        existingUser.role = safeRole;
+        existingUser.verified = safeRole === "wholesaler" ? false : true;
+        if (businessName) existingUser.shopName = businessName;
         userToSave = existingUser;
       }
     } else {
       // New User
       const hashedPassword = await bcrypt.hash(password, 10);
+      
+      // Fix Privilege Escalation: Constrain roles to wholesaler or retailer
+      const safeRole = role === "wholesaler" ? "wholesaler" : "retailer";
+      
       userToSave = new User({
         firstName,
         lastName,
         email,
         password: hashedPassword,
-        role: role || "retailer",
-        verified: (role || "retailer") === "wholesaler" ? false : true,
+        role: safeRole,
+        verified: safeRole === "wholesaler" ? false : true,
         isEmailVerified: false,
+        shopName: businessName || undefined,
       });
     }
 
@@ -98,6 +107,10 @@ export const registerUser = async (req, res) => {
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
+
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ message: "Invalid input format" });
+    }
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -153,8 +166,8 @@ export const verifyEmail = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    if (!email || !otp) {
-      return res.status(400).json({ message: "Email and OTP are required" });
+    if (!email || typeof email !== 'string' || !otp || typeof otp !== 'string') {
+      return res.status(400).json({ message: "Email and OTP are required strings" });
     }
 
     const user = await User.findOne({ email });
@@ -208,8 +221,8 @@ export const resendOtp = async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "Email is required" });
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ message: "Valid email is required" });
     }
 
     const user = await User.findOne({ email });
@@ -325,7 +338,7 @@ export const updatePassword = async (req, res) => {
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email || typeof email !== 'string') return res.status(400).json({ message: "Valid email is required" });
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -355,8 +368,8 @@ export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
 
-    if (!email || !otp || !newPassword) {
-      return res.status(400).json({ message: "Email, OTP, and new password are required" });
+    if (!email || typeof email !== 'string' || !otp || typeof otp !== 'string' || !newPassword || typeof newPassword !== 'string') {
+      return res.status(400).json({ message: "Email, OTP, and new password must be valid strings" });
     }
 
     const user = await User.findOne({ email });

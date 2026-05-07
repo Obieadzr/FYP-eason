@@ -85,18 +85,33 @@ export default function Register() {
       triggerShake();
       return;
     }
-    if (form.password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (form.password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
       triggerShake();
       return;
     }
     setLoading(true);
     try {
-      await api.post("/auth/send-otp", { email: form.email });
+      const parts = form.name.trim().split(" ");
+      const firstName = parts[0];
+      const lastName = parts.slice(1).join(" ") || firstName;
+      
+      await api.post("/auth/register", {
+        firstName,
+        lastName,
+        email: form.email,
+        password: form.password,
+        role,
+        businessName: form.businessName
+      });
       toast.success("OTP sent to your email.");
       setStep(2);
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Failed to send OTP.");
+      // Show the first validation error if it exists, otherwise the main message
+      const errorMsg = err?.response?.data?.errors?.[0]?.message 
+        || err?.response?.data?.message 
+        || "Registration failed.";
+      toast.error(errorMsg);
       triggerShake();
     } finally {
       setLoading(false);
@@ -112,7 +127,7 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/register", { ...form, role, otp });
+      const { data } = await api.post("/auth/verify-email", { email: form.email, otp });
       if (data.token) {
         localStorage.setItem("eason_token", data.token);
         login(data.user);
@@ -120,12 +135,9 @@ export default function Register() {
         const r = data.user?.role;
         if (r === "admin") navigate("/dashboard");
         else navigate("/profile");
-      } else {
-        toast.success("Account created! Please log in.");
-        navigate("/login");
       }
     } catch (err) {
-      toast.error(err?.response?.data?.message || "Registration failed.");
+      toast.error(err?.response?.data?.message || "Verification failed.");
       triggerShake();
     } finally {
       setLoading(false);
@@ -344,7 +356,7 @@ export default function Register() {
                     type="button"
                     onClick={async () => {
                       try {
-                        await api.post("/auth/send-otp", { email: form.email });
+                        await api.post("/auth/resend-otp", { email: form.email });
                         toast.success("New OTP sent.");
                       } catch { toast.error("Failed to resend."); }
                     }}
