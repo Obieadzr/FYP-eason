@@ -29,8 +29,8 @@ export default function WholesalerStorefront() {
   useEffect(() => {
     const fetchSupplierData = async () => {
       try {
-        const res = await API.get("/products");
-        const allProducts = res.data || [];
+        const res = await API.get("/products?limit=100");
+        const allProducts = res.data.products || res.data || [];
         const supplierProducts = allProducts.filter(p => p.wholesaler?._id === id);
         
         if (supplierProducts.length > 0) {

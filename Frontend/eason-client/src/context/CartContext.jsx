@@ -76,15 +76,8 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    if (user.role === "wholesaler") {
-      toast.error("Wholesalers cannot add items to the retail cart at this time", {
-        duration: 5000,
-      });
-      return;
-    }
-
-    if (user.role !== "retailer") {
-      toast.error("Only retailers can shop in the marketplace right now", {
+    if (user.id === product.wholesaler?._id || user._id === product.wholesaler?._id) {
+      toast.error("You cannot add your own products to the cart", {
         duration: 4000,
       });
       return;

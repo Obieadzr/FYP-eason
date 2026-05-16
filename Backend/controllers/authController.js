@@ -1,8 +1,10 @@
 // backend/routes/authController.js
 import User from "../models/User.js";
+import Company from "../models/Company.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import zxcvbn from "zxcvbn";
+import crypto from "crypto";
 import { sendVerificationEmail, sendPasswordResetEmail } from "../utils/email.js";
 
 export const registerUser = async (req, res) => {
@@ -49,15 +51,18 @@ export const registerUser = async (req, res) => {
         const safeRole = role === "wholesaler" ? "wholesaler" : "retailer";
         existingUser.role = safeRole;
         existingUser.verified = safeRole === "wholesaler" ? false : true;
-        if (businessName) existingUser.shopName = businessName;
         userToSave = existingUser;
       }
     } else {
-      // New User
-      const hashedPassword = await bcrypt.hash(password, 10);
-      
-      // Fix Privilege Escalation: Constrain roles to wholesaler or retailer
+      // New User - Create their Company first
       const safeRole = role === "wholesaler" ? "wholesaler" : "retailer";
+      
+      const newCompany = await Company.create({
+        name: businessName || `${firstName}'s Business`,
+        type: safeRole,
+      });
+
+      const hashedPassword = await bcrypt.hash(password, 10);
       
       userToSave = new User({
         firstName,
@@ -68,11 +73,18 @@ export const registerUser = async (req, res) => {
         verified: safeRole === "wholesaler" ? false : true,
         isEmailVerified: false,
         shopName: businessName || undefined,
+        companyId: newCompany._id,
+        companyRole: "admin",
+        isCompanyOwner: true
       });
+
+      // Update company owner reference
+      newCompany.owner = userToSave._id;
+      await newCompany.save();
     }
 
-    // Generate a 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     console.log(`\n\n=========================================`);
     console.log(`🔑 [DEV MODE] EMAIL OTP FOR ${email}: ${otp}`);
     console.log(`=========================================\n\n`);
@@ -139,7 +151,12 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.role },
+      { 
+        id: user._id, 
+        role: user.role,
+        companyId: user.companyId,
+        companyRole: user.companyRole 
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -154,6 +171,8 @@ export const loginUser = async (req, res) => {
         role: user.role,
         verified: user.verified,
         isEmailVerified: user.isEmailVerified,
+        companyId: user.companyId,
+        companyRole: user.companyRole
       },
     });
   } catch (error) {
@@ -246,8 +265,8 @@ export const resendOtp = async (req, res) => {
       }
     }
 
-    // Generate a new 6-digit OTP
-    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a secure new 6-digit OTP
+    const newOtp = crypto.randomInt(100000, 999999).toString();
     console.log(`\n\n=========================================`);
     console.log(`🔑 [DEV MODE] RESENT OTP FOR ${email}: ${newOtp}`);
     console.log(`=========================================\n\n`);
@@ -310,7 +329,15 @@ export const updateProfile = async (req, res) => {
     if (businessType) user.businessType = businessType;
 
     await user.save();
-    res.status(200).json({ message: "Profile updated", user });
+    
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.emailVerificationOtp;
+    delete safeUser.emailVerificationOtpExpires;
+    delete safeUser.passwordResetOtp;
+    delete safeUser.passwordResetOtpExpires;
+    
+    res.status(200).json({ message: "Profile updated", user: safeUser });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
@@ -346,7 +373,7 @@ export const forgotPassword = async (req, res) => {
       return res.status(200).json({ message: "If your email is registered, an OTP has been sent." });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = crypto.randomInt(100000, 999999).toString();
     console.log(`\n\n=========================================`);
     console.log(`🔑 [DEV MODE] PASSWORD RESET OTP FOR ${email}: ${otp}`);
     console.log(`=========================================\n\n`);
@@ -355,7 +382,7 @@ export const forgotPassword = async (req, res) => {
     user.passwordResetOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
     await user.save();
 
-    await sendPasswordResetEmail(user.email, otp);
+    sendPasswordResetEmail(user.email, otp).catch(console.error);
 
     res.status(200).json({ message: "If your email is registered, an OTP has been sent." });
   } catch (error) {

@@ -5,7 +5,7 @@ import ChatButton from "../../components/chat/ChatButton.jsx";
 import {
   ArrowLeft, Plus, Minus, Package, Heart, ShoppingBag,
   ChevronDown, MapPin, RefreshCw, Truck, Shield,
-  Store, Star, Search, User
+  Store, Star, Search, User, Repeat, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
@@ -124,6 +124,12 @@ export default function ProductDetail() {
   const [addedToCart, setAddedToCart] = useState(false);
   const [selectedVariants, setSelectedVariants] = useState({});
 
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [subFrequency, setSubFrequency] = useState("monthly");
+  const [subAddress, setSubAddress] = useState("");
+  const [subPhone, setSubPhone] = useState(user?.phone || "");
+  const [submittingSub, setSubmittingSub] = useState(false);
+
   const availableVariants = useMemo(() => {
     if (!product?.attributes) return [];
 
@@ -209,6 +215,30 @@ export default function ProductDetail() {
     }
     addToCart(product, quantity, selectedVariants);
     navigate("/cart");
+  };
+
+  const handleSubscribe = async (e) => {
+    e.preventDefault();
+    if (!subAddress || !subPhone) return toast.error("Please provide address and phone number");
+    if (!isAllVariantsSelected) return toast.error("Please select all options before subscribing");
+
+    setSubmittingSub(true);
+    try {
+      await API.post("/standing-orders", {
+        productId: product._id,
+        quantity,
+        frequency: subFrequency,
+        shippingAddress: subAddress,
+        phone: subPhone,
+        startDate: new Date()
+      });
+      toast.success("Standing Order successfully created!");
+      setShowSubscribeModal(false);
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to setup subscription");
+    } finally {
+      setSubmittingSub(false);
+    }
   };
 
   const handleWishlistToggle = async () => {
@@ -427,8 +457,8 @@ export default function ProductDetail() {
               </div>
             )}
 
-            {/* Quantity + CTA — only non-wholesaler */}
-            {user?.role !== "wholesaler" && (
+            {/* Quantity + CTA — only non-owners */}
+            {user?._id !== product.wholesaler?._id && (
               <div className="space-y-4">
                 {/* Variant Selectors */}
                 {availableVariants.map((variant) => (
@@ -534,6 +564,16 @@ export default function ProductDetail() {
                   </button>
                 )}
 
+                {/* Subscribe */}
+                {!isOutOfStock && (
+                  <button
+                    onClick={() => setShowSubscribeModal(true)}
+                    className="w-full py-4 rounded-full text-sm font-semibold border-[1.5px] border-emerald-600 text-emerald-700 hover:bg-emerald-50 transition flex items-center justify-center gap-2"
+                  >
+                    <Repeat className="w-4 h-4" /> Subscribe (Standing Order)
+                  </button>
+                )}
+
                 {/* Negotiate */}
                 {product.wholesaler?._id && (
                   <button
@@ -547,9 +587,9 @@ export default function ProductDetail() {
             )}
 
             {/* Wholesaler notice */}
-            {user?.role === "wholesaler" && (
+            {user?._id === product.wholesaler?._id && (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-sm text-amber-800">
-                You're viewing as a wholesaler. You can't purchase your own listed products, but you can browse items from other wholesalers.
+                You're viewing your own product. You cannot purchase your own listed products.
               </div>
             )}
 
@@ -688,6 +728,69 @@ export default function ProductDetail() {
         {/* ── Reviews ── */}
         <ReviewSection productId={product._id} />
       </div>
+
+      {/* SUBSCRIBE MODAL */}
+      <AnimatePresence>
+        {showSubscribeModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl relative"
+            >
+              <button onClick={() => setShowSubscribeModal(false)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-900">
+                <X className="w-5 h-5" />
+              </button>
+              
+              <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4">
+                <Repeat className="w-6 h-6 stroke-[2]" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Subscription</h2>
+              <p className="text-sm text-gray-500 mb-6">Automatically re-order <strong>{quantity}x {product.name}</strong> at a schedule that works for you.</p>
+
+              <form onSubmit={handleSubscribe} className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Frequency</label>
+                  <select 
+                    value={subFrequency} onChange={e => setSubFrequency(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-colors"
+                  >
+                    <option value="weekly">Weekly</option>
+                    <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Shipping Address</label>
+                  <input 
+                    required type="text" placeholder="e.g. 123 Main St, Kathmandu"
+                    value={subAddress} onChange={e => setSubAddress(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Phone Number</label>
+                  <input 
+                    required type="tel" placeholder="+977"
+                    value={subPhone} onChange={e => setSubPhone(e.target.value)}
+                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl px-4 py-3 outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button type="submit" disabled={submittingSub} className="w-full bg-black text-white font-bold text-sm rounded-xl py-3.5 hover:bg-gray-900 transition flex items-center justify-center">
+                    {submittingSub ? "Setting up..." : "Confirm Subscription"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="border-t border-gray-100 bg-[#fafafa]">

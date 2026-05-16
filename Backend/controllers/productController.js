@@ -40,7 +40,7 @@ export const createProduct = async (req, res) => {
     const imagePaths = (req.files || []).map(file => `/uploads/${file.filename}`);
 
     console.log("[createProduct] Saving to DB...");
-    
+
     let parsedAttributes = {};
     if (attributes) {
       try {
@@ -79,7 +79,7 @@ export const createProduct = async (req, res) => {
     res.status(201).json(product);
   } catch (error) {
     console.error("[createProduct] Error:", error.message);
-    res.status(500).json({ message: error.message || "Server error" });
+    res.status(500).json({ message: "An internal server error occurred." });
   }
 };
 
@@ -115,7 +115,7 @@ export const updateProduct = async (req, res) => {
         console.error("Failed to parse attributes JSON in update");
       }
     }
-    
+
     if (bulkPricing !== undefined) {
       try {
         updateData.bulkPricing = typeof bulkPricing === 'string' ? JSON.parse(bulkPricing) : bulkPricing;
@@ -149,15 +149,15 @@ export const updateProduct = async (req, res) => {
     // Image handling - replacing all images with new ones if new files are uploaded
     if (req.files && req.files.length > 0) {
       // Delete all old images if they exist
-        const allOldImages = product.images?.length > 0 ? product.images : (product.image ? [product.image] : []);
-        for (const oldImg of allOldImages) {
-          const oldPath = path.join(__dirname, "..", oldImg);
-          try {
-            await fs.unlink(oldPath);
-          } catch (err) {
-            console.warn("Old image delete failed:", err.message);
-          }
+      const allOldImages = product.images?.length > 0 ? product.images : (product.image ? [product.image] : []);
+      for (const oldImg of allOldImages) {
+        const oldPath = path.join(__dirname, "..", oldImg);
+        try {
+          await fs.unlink(oldPath);
+        } catch (err) {
+          console.warn("Old image delete failed:", err.message);
         }
+      }
       const newPaths = req.files.map(file => `/uploads/${file.filename}`);
       updateData.image = newPaths[0];
       updateData.images = newPaths;
@@ -177,24 +177,36 @@ export const updateProduct = async (req, res) => {
     res.json(updated);
   } catch (error) {
     console.error("Update product error:", error);
-    res.status(500).json({ message: error.message || "Server error" });
+    res.status(500).json({ message: "An internal server error occurred." });
   }
 };
 
 export const getProducts = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
     const products = await Product.find()
       .populate("category", "name")
       .populate("unit", "name")
       .populate("wholesaler", "firstName lastName companyName verified email")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    const totalProducts = await Product.countDocuments();
 
     const prepared = products.map((product) => ({
       ...product.toObject(),
       priceInfo: product.getPriceForUser(req.user),
     }));
 
-    res.json(prepared);
+    res.json({
+      products: prepared,
+      currentPage: page,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts
+    });
   } catch (error) {
     console.error("Get products error:", error);
     res.status(500).json({ message: "Server error" });

@@ -83,6 +83,10 @@ export const verifyKhaltiPayment = async (req, res) => {
       const order = await Order.findById(orderId);
       if (!order) return res.status(404).json({ message: "Order not found." });
 
+      if (order.paymentStatus === "paid") {
+        return res.status(200).json({ success: true, message: "Payment already verified", order });
+      }
+
       order.paymentStatus = "paid";
       // We can also change the overall status to processing if it was pending
       if (order.status === "pending") order.status = "processing";

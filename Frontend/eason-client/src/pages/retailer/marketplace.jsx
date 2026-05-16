@@ -203,9 +203,10 @@ export default function Marketplace() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await API.get("/products");
-        setProducts(res.data || []);
-        setFilteredProducts(res.data || []);
+        const res = await API.get("/products?limit=100");
+        const data = res.data.products || res.data || [];
+        setProducts(data);
+        setFilteredProducts(data);
       } catch {
         toast.error("Failed to load products");
       } finally {
@@ -243,7 +244,9 @@ export default function Marketplace() {
     setFilteredProducts(f);
   }, [searchQuery, selectedCategory, sortBy, products]);
 
-  const categories = ["All", ...new Set(products.map(p => p.category?.name).filter(Boolean))];
+  const dynamicCategories = products.map(p => p.category?.name).filter(Boolean);
+  const baseCategories = ["All", ...FEATURE_CATEGORIES.map(c => c.label)];
+  const categories = [...new Set([...baseCategories, ...dynamicCategories])];
   const isNew = (date) => new Date(date) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const getDisplayPrice = (product) => {
@@ -711,7 +714,7 @@ export default function Marketplace() {
               </a>
 
               {/* Brand Cards */}
-              {filteredProducts.filter(p => p.image || (searchQuery && searchQuery.trim() !== "")).map((p, i) => {
+              {filteredProducts.map((p, i) => {
                 const inWishlist = wishlist.includes(p._id);
                 const price = p.priceInfo?.finalPrice || p.wholesalerPrice || p.price || 0;
                 

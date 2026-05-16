@@ -18,6 +18,14 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Company",
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
     items: [orderItemSchema],
     totalAmount: { type: Number, required: true, min: 0 },       // pre-tax subtotal
     taxAmount: { type: Number, default: 0 },                     // 13% VAT
@@ -29,7 +37,7 @@ const orderSchema = new mongoose.Schema(
     notes: { type: String, default: "" },
     status: {
       type: String,
-      enum: ["pending", "accepted", "processing", "shipped", "delivered", "cancelled"],
+      enum: ["pending_approval", "pending", "accepted", "processing", "shipped", "delivered", "cancelled"],
       default: "pending",
     },
     paymentStatus: {

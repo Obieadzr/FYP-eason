@@ -25,21 +25,27 @@ router.get("/wallet", authMiddleware, async (req, res) => {
 router.post("/wallet/withdraw", authMiddleware, async (req, res) => {
   try {
     const { amount, method, account } = req.body;
-    let wallet = await Wallet.findOne({ user: req.user.id });
-    if (!wallet || wallet.balance < amount) {
+    
+    const wallet = await Wallet.findOneAndUpdate(
+      { user: req.user.id, balance: { $gte: amount } },
+      { 
+        $inc: { balance: -amount },
+        $push: { 
+          transactions: { 
+            amount: -amount, 
+            type: "withdrawal", 
+            status: "pending", 
+            description: `Withdrawal request to ${method} (${account})` 
+          } 
+        } 
+      },
+      { new: true }
+    );
+
+    if (!wallet) {
       return res.status(400).json({ success: false, message: "Insufficient balance" });
     }
-
-    // Deduct
-    wallet.balance -= amount;
-    wallet.transactions.push({
-      amount: -amount,
-      type: "withdrawal",
-      status: "pending",
-      description: `Withdrawal request to ${method} (${account})`
-    });
     
-    await wallet.save();
     res.json({ success: true, message: "Withdrawal request submitted! Funds will arrive in 24 hours.", wallet });
   } catch (err) {
     res.status(500).json({ success: false, message: "Withdrawal failed" });

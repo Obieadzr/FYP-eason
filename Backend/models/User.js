@@ -32,6 +32,11 @@ const userSchema = new mongoose.Schema({
   wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   passwordResetOtp: { type: String },
   passwordResetOtpExpires: { type: Date },
+  
+  // B2B Multi-User Account Fields
+  companyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
+  companyRole: { type: String, enum: ['admin', 'approver', 'buyer'] },
+  isCompanyOwner: { type: Boolean, default: false },
 }, { timestamps: true });
 
 userSchema.virtual('fullName').get(function() {

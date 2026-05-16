@@ -298,7 +298,12 @@ router.put("/users/:id/role", async (req, res) => {
     user.role = role;
     await user.save();
     
-    res.json({ message: "Role updated", user });
+    const safeUser = user.toObject();
+    delete safeUser.password;
+    delete safeUser.emailVerificationOtp;
+    delete safeUser.passwordResetOtp;
+    
+    res.json({ message: "Role updated", user: safeUser });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }

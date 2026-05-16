@@ -5,6 +5,14 @@ import { authMiddleware } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { registerSchema, loginSchema } from "../validators/schemas.js";
 
+import rateLimit from "express-rate-limit";
+
+const resetPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many password reset attempts. Try again in 15 minutes." }
+});
+
 const router = express.Router();
 
 router.post("/register", validate(registerSchema), registerUser);
@@ -15,6 +23,6 @@ router.get("/me", authMiddleware, getCurrentUser);
 router.put("/profile", authMiddleware, updateProfile);
 router.put("/password", authMiddleware, updatePassword);
 router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", resetPasswordLimiter, resetPassword);
 
 export default router;

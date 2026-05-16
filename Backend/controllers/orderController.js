@@ -72,8 +72,14 @@ export const createOrder = async (req, res) => {
     const platformFee = Math.round(totalAmount * 0.02 * 100) / 100;
     const wholesalerPayout = totalAmount - platformFee;
 
+    let initialStatus = "pending";
+    if (grandTotal > 50000 && req.user.companyId) {
+      initialStatus = "pending_approval";
+    }
+
     const order = await Order.create({
       user: userId,
+      company: req.user.companyId || null,
       items: orderItems,
       totalAmount,
       taxAmount,
@@ -83,7 +89,7 @@ export const createOrder = async (req, res) => {
       shippingAddress,
       phone,
       notes: notes?.trim() || "",
-      status: "pending",
+      status: initialStatus,
       paymentStatus: "pending",
       paymentMethod: paymentMethod || "cod",
     });
@@ -121,14 +127,52 @@ export const createOrder = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate("items.product");
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    // Enforce Authorization (IDOR fixes)
+    const isOwner = order.user.toString() === req.user.id;
+    const isCompanyMatch = order.company && req.user.companyId && order.company.toString() === req.user.companyId;
+    
+    // Check if the user is a supplier trying to update their own order
+    const isSupplier = order.items.some(item => item.product && item.product.wholesaler.toString() === req.user.id);
+
+    if (!isOwner && !isCompanyMatch && !isSupplier && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Not authorized to update this order" });
+    }
+
+    // Handle Approval Logic (Buyer side)
+    if (status === "pending" && order.status === "pending_approval") {
+      if (!isCompanyMatch) return res.status(403).json({ message: "Only company members can approve" });
+      if (req.user.companyRole === "buyer") return res.status(403).json({ message: "Buyers cannot approve orders" });
+      if (order.user.toString() === req.user.id) return res.status(403).json({ message: "You cannot approve your own order" });
+      order.approvedBy = req.user.id;
+    } 
+    // Handle Delivery Logic (Buyer side)
+    else if (status === "delivered") {
+      if (!isOwner && !isCompanyMatch && req.user.role !== "admin") {
+        return res.status(403).json({ message: "Only the buyer can verify delivery." });
+      }
+      if (order.status !== "shipped") {
+        return res.status(400).json({ message: "Order must be shipped before marking as delivered." });
+      }
+    }
+    // Handle Fulfillment Logic (Supplier side)
+    else if (status === "processing" || status === "shipped") {
+      if (!isSupplier && req.user.role !== "admin") {
+        return res.status(403).json({ message: "Only the supplier can process or ship this order." });
+      }
+      if (order.status === "pending_approval") {
+        return res.status(400).json({ message: "Order must be approved before processing." });
+      }
+    }
 
     order.status = status;
     await order.save();
 
     res.json({ message: "Order status updated", order });
   } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+    console.error("Order status update failed:", err.message);
+    res.status(500).json({ message: "An internal server error occurred." });
   }
 };

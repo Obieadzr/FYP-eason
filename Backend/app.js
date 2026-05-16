@@ -21,17 +21,23 @@ import paymentRoutes from './routes/paymentRoutes.js';
 import kycRoutes from './routes/kycRoutes.js';
 import adminKycRoutes from './routes/adminKycRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
-import quoteRoutes from './routes/quoteRoutes.js';
 import wishlistRoutes from './routes/wishlistRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import companyRoutes from './routes/companyRoutes.js';
+import standingOrderRoutes from './routes/standingOrderRoutes.js';
 
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+import helmet from 'helmet';
+
 const app = express();
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 
 // ── Rate Limiting ────────────────────────────────────────────────────────────
 // All limiters now use default safe keyGenerator (fixes IPv6 warning)
@@ -61,8 +67,8 @@ const orderLimiter = rateLimit({
 
 // ── Middleware ──────────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.FRONTEND_URL 
-    ? [process.env.FRONTEND_URL] 
+  origin: process.env.FRONTEND_URL
+    ? [process.env.FRONTEND_URL]
     : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -97,10 +103,10 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/kyc', kycRoutes);
 app.use('/api/admin/kyc', adminKycRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/api/ai', aiRoutes);
-app.use('/api/quotes', quoteRoutes);
 app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/company', companyRoutes);
+app.use('/api/standing-orders', standingOrderRoutes);
 
 app.get('/', (req, res) => res.send('eAson backend running!'));
 
@@ -153,7 +159,7 @@ io.use((socket, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
     socket.user = decoded;
     next();
-  } catch(err) {
+  } catch (err) {
     next(new Error("Authentication error"));
   }
 });
@@ -162,17 +168,17 @@ const onlineUsers = new Map();
 
 io.on('connection', (socket) => {
   const userId = socket.user.id || socket.user._id;
-  
+
   onlineUsers.set(userId.toString(), socket.id);
   io.emit('user_online', Array.from(onlineUsers.keys()));
 
   socket.on('join_conversation', (conversationId) => socket.join(conversationId));
   socket.on('leave_conversation', (conversationId) => socket.leave(conversationId));
-  
+
   socket.on('typing_start', (convId) => {
     socket.to(convId).emit('user_typing', { conversationId: convId, userId, isTyping: true });
   });
-  
+
   socket.on('typing_stop', (convId) => {
     socket.to(convId).emit('user_typing', { conversationId: convId, userId, isTyping: false });
   });

@@ -8,6 +8,11 @@ import { useChat } from "./store/useChat.js";
 import LandingPage from "./pages/public/LandingPage.jsx";
 import Login from "./pages/auth/Login.jsx";
 import Register from "./pages/auth/Register.jsx";
+import ForgotPassword from "./pages/auth/ForgotPassword.jsx";
+import AcceptInvite from "./pages/auth/AcceptInvite.jsx";
+import TeamManagement from "./pages/company/TeamManagement.jsx";
+import ApprovalQueue from "./pages/company/ApprovalQueue.jsx";
+import StandingOrders from "./pages/company/StandingOrders.jsx";
 import Marketplace from "./pages/retailer/Marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
@@ -116,6 +121,8 @@ function App() {
         
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/accept-invite" element={<AcceptInvite />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/marketplace/product/:id" element={<ProductDetail />} />
         <Route path="/cart" element={<Cart />} />
@@ -130,6 +137,9 @@ function App() {
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
         <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
         <Route path="/orders/kanban" element={<ProtectedRoute allowedRoles={["wholesaler", "admin"]}><OrderKanban /></ProtectedRoute>} />
+        <Route path="/company/team" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+        <Route path="/company/approvals" element={<ProtectedRoute><ApprovalQueue /></ProtectedRoute>} />
+        <Route path="/company/standing-orders" element={<ProtectedRoute><StandingOrders /></ProtectedRoute>} />
 
         <Route
           path="/add-product"
