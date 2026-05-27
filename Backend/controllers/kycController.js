@@ -33,7 +33,7 @@ export const submitKyc = async (req, res) => {
 
     user.panDocument = `/uploads/kyc/${panDocument[0].filename}`;
     user.businessLicense = `/uploads/kyc/${businessLicense[0].filename}`;
-    
+
     // Save business profile details alongside the document upload
     if (shopName) user.shopName = shopName;
     if (panNumber) user.panNumber = panNumber;
@@ -56,7 +56,7 @@ export const getKycStatus = async (req, res) => {
   try {
     const userId = req.user.id || req.user._id;
     const user = await User.findById(userId).select('panVerificationStatus licenseVerificationStatus panAiResult licenseAiResult rejectionReason kycSubmittedAt panAiScore licenseAiScore panDocument businessLicense verified');
-    
+
     if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json(user);
   } catch (error) {
@@ -70,9 +70,9 @@ export const getKycStatus = async (req, res) => {
 
 export const getKycQueue = async (req, res) => {
   try {
-    const users = await User.find({ 
-      role: 'wholesaler', 
-      panVerificationStatus: { $in: ['pending', 'ai_checked', 'rejected', 'not_submitted'] } 
+    const users = await User.find({
+      role: 'wholesaler',
+      panVerificationStatus: { $in: ['pending', 'ai_checked', 'rejected', 'not_submitted'] }
     }).sort({ kycSubmittedAt: -1 }).select('-password');
     res.status(200).json(users);
   } catch (error) {
@@ -105,18 +105,18 @@ export const runAiCheck = async (req, res) => {
     }
 
     const anthropic = getAnthropicClient();
-    
+
     // MOCK RESPONSES IF NO API KEY — but do real validation on declared data
     if (!anthropic) {
       console.warn("MOCKING CLAUDE AI CALL: Missing ANTHROPIC_API_KEY — running rule-based validation instead.");
 
       const issues = [];
       let confidenceScore = 85;
-      
+
       // --- PAN Validation ---
       const declaredPan = user.panNumber?.trim() || "";
       const panValid = /^\d{9}$/.test(declaredPan); // Nepal PAN: exactly 9 digits
-      
+
       if (!declaredPan) {
         issues.push("No PAN number declared in profile.");
         confidenceScore -= 25;
@@ -124,11 +124,11 @@ export const runAiCheck = async (req, res) => {
         issues.push(`PAN number "${declaredPan}" is not a valid Nepal PAN (must be exactly 9 digits, numeric only).`);
         confidenceScore -= 30;
       }
-      
+
       // --- Name consistency check (basic) ---
       const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
       const panNameMatch = panValid; // Without real AI we can't extract from image, so assume match only if valid format
-      
+
       // --- Business info checks ---
       if (!user.shopName || user.shopName.trim().length < 3) {
         issues.push("Shop name is missing or too short.");
@@ -147,7 +147,7 @@ export const runAiCheck = async (req, res) => {
       const licenseValid = true; // Human admin must verify visually
       const suspiciousFlag = confidenceScore < 50 || issues.length >= 3;
       const finalScore = Math.max(0, Math.min(100, confidenceScore));
-      
+
       let recommendation = "approve";
       if (finalScore < 50 || !panValid) recommendation = "reject";
       else if (finalScore < 70 || issues.length > 1) recommendation = "manual_review";
@@ -180,7 +180,7 @@ export const runAiCheck = async (req, res) => {
     const licFile = fileToBase64(user.businessLicense);
 
     if (!panFile || !licFile) {
-       return res.status(400).json({ message: "Missing document physical files on disk." });
+      return res.status(400).json({ message: "Missing document physical files on disk." });
     }
 
     // PDF not supported by Anthropic Vision in standard blocks yet without strict extraction, but assuming images for now. If PDF, Anthropic supports it in beta.
@@ -204,7 +204,7 @@ export const runAiCheck = async (req, res) => {
     let resultJSON;
     try {
       resultJSON = JSON.parse(aiText);
-    } catch(e) {
+    } catch (e) {
       console.error("AI didn't return perfect JSON. Stripping block ticks.");
       const stripped = aiText.replace(/```json/g, '').replace(/```/g, '').trim();
       resultJSON = JSON.parse(stripped);
@@ -216,7 +216,7 @@ export const runAiCheck = async (req, res) => {
     user.licenseVerificationStatus = 'ai_checked';
     user.panAiScore = resultJSON.confidenceScore || 0;
     user.licenseAiScore = resultJSON.confidenceScore || 0;
-    
+
     await user.save();
     return res.status(200).json({ message: "AI check completed", result: resultJSON });
   } catch (error) {

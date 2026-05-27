@@ -396,28 +396,28 @@ export default function Marketplace() {
 
             {/* Right */}
             <div className="flex-1 flex justify-end items-center gap-6">
-              <button onClick={() => navigate("/wishlist")} className="relative text-white/50 hover:text-white transition">
+              <button onClick={() => navigate("/wishlist")} aria-label="Wishlist" className="relative text-white/50 hover:text-white transition">
                 <Heart className="w-[22px] h-[22px]" />
                 {wishlist.length > 0 && (
                   <span className="absolute -top-2 -right-2 w-4 h-4 bg-rose-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">{wishlist.length}</span>
                 )}
               </button>
               {user?.role === "retailer" && (
-                <button onClick={() => navigate("/profile")} className="text-white/50 hover:text-white transition">
+                <button onClick={() => navigate("/profile")} aria-label="Profile Orders" className="text-white/50 hover:text-white transition">
                   <Package className="w-[22px] h-[22px]" />
                 </button>
               )}
-              <button onClick={() => navigate("/cart")} className="relative text-white/50 hover:text-white transition">
+              <button onClick={() => navigate("/cart")} aria-label="Cart" className="relative text-white/50 hover:text-white transition">
                 <ShoppingBag className="w-[22px] h-[22px]" />
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 w-4 h-4 bg-emerald-500 rounded-full text-[9px] font-bold flex items-center justify-center text-white">{cartCount}</span>
                 )}
               </button>
-              <button className="text-white/50 hover:text-white transition">
+              <button aria-label="Notifications" className="text-white/50 hover:text-white transition">
                 <Bell className="w-[22px] h-[22px]" />
               </button>
               <div className="w-px h-5 bg-white/10" />
-              <button onClick={() => navigate(user ? "/profile" : "/login")} className="text-white/50 hover:text-white transition pl-1">
+              <button onClick={() => navigate(user ? "/profile" : "/login")} aria-label="User Account" className="text-white/50 hover:text-white transition pl-1">
                 {user ? (
                   <div className="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
                     {user.firstName?.[0]?.toUpperCase() || "U"}
@@ -727,12 +727,13 @@ export default function Marketplace() {
                     {/* Image Area - fixed 200px */}
                     <div className="h-[200px] w-full relative bg-[#f5f5f5] rounded-t-[12px] overflow-hidden shrink-0">
                       {p.image ? (
-                        <img src={`http://localhost:5000${p.image}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        <img src={`http://localhost:5000${p.image}`} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center"><Package className="w-12 h-12 text-gray-300" /></div>
                       )}
                       
                       <button
+                        aria-label="Toggle Wishlist"
                         onClick={(e) => { e.stopPropagation(); toggleWishlist(p._id); }}
                         className="absolute top-3 right-3 w-[30px] h-[30px] bg-white rounded-full flex items-center justify-center z-10 hover:scale-110 transition-transform"
                       >

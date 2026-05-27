@@ -15,7 +15,9 @@ const Products = () => {
     const fetchProducts = async () => {
       try {
         const res = await API.get("/products");
-        setProducts(res.data || []);
+        // Check if the backend returned paginated data { products: [] } or just an array []
+        const productData = res.data.products ? res.data.products : (Array.isArray(res.data) ? res.data : []);
+        setProducts(productData);
       } catch (err) {
         toast.error("Failed to load global inventory");
       } finally {

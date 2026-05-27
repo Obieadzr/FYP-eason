@@ -179,7 +179,7 @@ export default function LandingPage() {
                   <h3 className="text-[13px] font-bold tracking-tight text-white">OUR PRODUCTS</h3>
                   <div className="relative w-full h-full overflow-hidden bg-[#111]">
                     <img
-                      src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80"
+                      src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80"
                       alt="Wholesale products"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
                     />
@@ -196,7 +196,7 @@ export default function LandingPage() {
                   <h3 className="text-[13px] font-bold tracking-tight text-white">THE INFRASTRUCTURE</h3>
                   <div className="relative w-full h-full overflow-hidden bg-[#111]">
                     <img
-                      src="https://images.pexels.com/photos/4481534/pexels-photo-4481534.jpeg?auto=compress&cs=tinysrgb&w=800"
+                      src="https://images.pexels.com/photos/4481534/pexels-photo-4481534.jpeg?auto=compress&cs=tinysrgb&w=400"
                       alt="Warehouse"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
                     />
@@ -212,7 +212,7 @@ export default function LandingPage() {
                   <h3 className="text-[13px] font-bold tracking-tight text-white">OUR NETWORK</h3>
                   <div className="relative w-full h-full overflow-hidden bg-[#111]">
                     <img
-                      src="https://images.pexels.com/photos/1036371/pexels-photo-1036371.jpeg?auto=compress&cs=tinysrgb&w=800"
+                      src="https://images.pexels.com/photos/1036371/pexels-photo-1036371.jpeg?auto=compress&cs=tinysrgb&w=400"
                       alt="Retailers"
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-80 group-hover:opacity-100"
                     />
