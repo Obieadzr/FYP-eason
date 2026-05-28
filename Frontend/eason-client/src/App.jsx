@@ -13,7 +13,7 @@ import AcceptInvite from "./pages/auth/AcceptInvite.jsx";
 import TeamManagement from "./pages/company/TeamManagement.jsx";
 import ApprovalQueue from "./pages/company/ApprovalQueue.jsx";
 import StandingOrders from "./pages/company/StandingOrders.jsx";
-import Marketplace from "./pages/retailer/Marketplace.jsx";
+import Marketplace from "./pages/retailer/marketplace.jsx";
 import ProductDetail from "./pages/retailer/ProductDetail.jsx";
 import Cart from "./pages/retailer/Cart.jsx";
 import Wishlist from "./pages/retailer/Wishlist.jsx";
