@@ -22,6 +22,12 @@ export const useAuthStore = create(
         set({ user: null, isAuthenticated: false, loading: false });
       },
 
+      updateUser: (updatedUser) => {
+        set((state) => ({
+          user: { ...state.user, ...updatedUser }
+        }));
+      },
+
       checkAuth: async () => {
         const token = localStorage.getItem("eason_token");
         if (!token) {

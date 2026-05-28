@@ -22,7 +22,14 @@ router.get("/my-orders", authMiddleware, async (req, res) => {
   try {
     const orders = await Order.find({ user: req.user.id })
       .sort({ createdAt: -1 })
-      .populate("items.product", "name image wholesalerPrice wholesaler");
+      .populate({
+        path: "items.product",
+        select: "name image wholesalerPrice wholesaler stock moq bulkPricing",
+        populate: {
+          path: "wholesaler",
+          select: "firstName lastName email shopName"
+        }
+      });
 
     res.json({
       success: true,
@@ -46,10 +53,14 @@ router.get("/wholesaler", authMiddleware, async (req, res) => {
 
   try {
     const orders = await Order.find()
-      .populate("user", "firstName lastName email")
+      .populate("user", "firstName lastName email shopName role")
       .populate({
         path: "items.product",
-        select: "name image wholesalerPrice wholesaler",
+        select: "name image wholesalerPrice wholesaler stock moq bulkPricing",
+        populate: {
+          path: "wholesaler",
+          select: "firstName lastName email shopName"
+        }
       })
       .sort({ createdAt: -1 });
 

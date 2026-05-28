@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Package, TrendingUp, Settings,
   LogOut, CheckCircle2, Boxes, AlertTriangle, ShoppingBag,
   Search, Plus, Edit3, Trash2, Loader2, Download, MessageCircle,
-  Image, DollarSign, Clock, Store, Truck, X, XCircle, Users, ArrowUpRight, ArrowDownRight, Calendar, HelpCircle, ChevronDown, ChevronRight, MessageSquare, MapPin, Check, Repeat
+  Image, DollarSign, Clock, Store, Truck, X, XCircle, Users, ArrowUpRight, ArrowDownRight, Calendar, HelpCircle, ChevronDown, ChevronRight, MessageSquare, MapPin, Check, Repeat, Lock
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import API from "../../utils/api";
@@ -182,7 +182,77 @@ function ProductModal({ product, categories, onClose, onSave }) {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateUser } = useAuthStore();
+  
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || "",
+    lastName: user?.lastName || "",
+    phone: user?.phone || "",
+    shopName: user?.shopName || "",
+    panNumber: user?.panNumber || "",
+    address: user?.address || "",
+    businessType: user?.businessType || (user?.role === "wholesaler" ? "wholesaler" : "retailer"),
+  });
+
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [settingsTab, setSettingsTab] = useState("profile"); // profile, security, preferences
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        phone: user.phone || "",
+        shopName: user.shopName || "",
+        panNumber: user.panNumber || "",
+        address: user.address || "",
+        businessType: user.businessType || (user.role === "wholesaler" ? "wholesaler" : "retailer"),
+      });
+    }
+  }, [user]);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const res = await API.put("/auth/profile", profileForm);
+      updateUser(res.data.user);
+      toast.success("Profile updated successfully!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to update profile.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast.error("New passwords do not match.");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await API.put("/auth/password", {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      toast.success("Password changed successfully!");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to change password.");
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   const [tab, setTab] = useState("overview");
   const isWholesaler = user?.role === "wholesaler";
 
@@ -333,16 +403,39 @@ export default function Profile() {
   const clientsList = useMemo(() => {
     const clientsMap = {};
     validOrders.forEach(o => {
-      const client = isWholesaler ? o.retailer : o.wholesaler;
-      if (client && client._id) {
-        if (!clientsMap[client._id]) {
-          clientsMap[client._id] = { ...client, totalOrders: 0, totalSpent: 0 };
+      if (isWholesaler) {
+        // For wholesaler, client is the retailer who placed the order (o.user)
+        const client = o.user;
+        if (client && client._id) {
+          if (!clientsMap[client._id]) {
+            clientsMap[client._id] = { ...client, totalOrders: 0, totalSpent: 0 };
+          }
+          clientsMap[client._id].totalOrders += 1;
+          clientsMap[client._id].totalSpent += (o.totalAmount || o.total || 0);
         }
-        clientsMap[client._id].totalOrders += 1;
-        clientsMap[client._id].totalSpent += (o.totalAmount || 0);
+      } else {
+        // For retailer, vendor is the wholesaler of the product (o.items[i].product.wholesaler)
+        o.items?.forEach(item => {
+          const vendor = item.product?.wholesaler;
+          if (vendor && vendor._id) {
+            if (!clientsMap[vendor._id]) {
+              clientsMap[vendor._id] = { ...vendor, totalOrders: 0, totalSpent: 0, orderIds: new Set() };
+            }
+            clientsMap[vendor._id].orderIds.add(o._id);
+            clientsMap[vendor._id].totalSpent += (item.quantity * (item.pricePerUnit || 0));
+          }
+        });
       }
     });
-    return Object.values(clientsMap);
+
+    // Convert Set of orderIds to totalOrders count
+    return Object.values(clientsMap).map(client => {
+      if (client.orderIds) {
+        client.totalOrders = client.orderIds.size;
+        delete client.orderIds;
+      }
+      return client;
+    });
   }, [validOrders, isWholesaler]);
 
   if (!user || loading) {
@@ -787,31 +880,306 @@ export default function Profile() {
 
                 {/* SETTINGS TAB */}
                 {tab === "settings" && (
-                  <div className="space-y-6 max-w-2xl">
-                    <h1 className="text-[24px] font-bold text-gray-900 mb-6">Account Settings</h1>
-                    <div className="bg-white rounded-2xl border border-gray-100 p-8 shadow-sm">
-                      <h2 className="text-lg font-bold text-gray-900 mb-6">Profile Details</h2>
-                      <div className="space-y-5">
-                        <div>
-                          <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase">Full Name</label>
-                          <input disabled value={fullName} className="w-full bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm font-medium" />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase">Email Address</label>
-                          <input disabled value={user.email} className="w-full bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm font-medium" />
-                        </div>
-                        {user.shopName && (
-                          <div>
-                            <label className="block text-xs font-bold text-gray-400 mb-1.5 uppercase">Shop Name</label>
-                            <input disabled value={user.shopName} className="w-full bg-gray-50 border border-gray-200 text-gray-700 px-4 py-3 rounded-xl text-sm font-medium" />
-                          </div>
+                  <div className="space-y-6 max-w-3xl">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-gray-100 pb-4 mb-6 gap-2">
+                      <div>
+                        <h1 className="text-[24px] font-bold text-gray-900">Account Settings</h1>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">Manage your personal information, security preferences, and shop details.</p>
+                      </div>
+                    </div>
+
+                    {/* Sub tabs */}
+                    <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4">
+                      <button
+                        onClick={() => setSettingsTab("profile")}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          settingsTab === "profile"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <Store className="w-4 h-4" /> Profile & Business
+                      </button>
+                      <button
+                        onClick={() => setSettingsTab("security")}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          settingsTab === "security"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <Lock className="w-4 h-4" /> Security & Password
+                      </button>
+                      <button
+                        onClick={() => setSettingsTab("preferences")}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                          settingsTab === "preferences"
+                            ? "bg-emerald-600 text-white shadow-sm"
+                            : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+                        }`}
+                      >
+                        <Settings className="w-4 h-4" /> Preferences
+                      </button>
+                    </div>
+
+                    {/* Content area */}
+                    <div className="bg-white rounded-3xl border border-gray-100 p-8 shadow-sm">
+                      <AnimatePresence mode="wait">
+                        {settingsTab === "profile" && (
+                          <motion.form
+                            key="profile-form"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            onSubmit={handleUpdateProfile}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-base font-bold text-gray-900 mb-2">Personal & Shop Profile</h3>
+                            
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                              <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">First Name</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={profileForm.firstName}
+                                  onChange={e => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Last Name</label>
+                                <input
+                                  type="text"
+                                  required
+                                  value={profileForm.lastName}
+                                  onChange={e => setProfileForm({ ...profileForm, lastName: e.target.value })}
+                                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                              <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Email Address (Read-only)</label>
+                                <input
+                                  type="email"
+                                  disabled
+                                  value={user?.email || ""}
+                                  className="w-full bg-gray-100 border border-gray-200 text-gray-500 text-sm px-4 py-3 rounded-xl font-medium cursor-not-allowed shadow-inner animate-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Phone Number</label>
+                                <input
+                                  type="tel"
+                                  value={profileForm.phone}
+                                  onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })}
+                                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                  placeholder="98XXXXXXXX"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="border-t border-gray-100 my-6 pt-6">
+                              <h4 className="text-sm font-bold text-gray-900 mb-4">Business Information</h4>
+                              
+                              <div className="space-y-5">
+                                <div>
+                                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Shop / Business Name</label>
+                                  <input
+                                    type="text"
+                                    value={profileForm.shopName}
+                                    onChange={e => setProfileForm({ ...profileForm, shopName: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                    placeholder="Your Store Name"
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">PAN / VAT Number</label>
+                                    <input
+                                      type="text"
+                                      value={profileForm.panNumber}
+                                      onChange={e => setProfileForm({ ...profileForm, panNumber: e.target.value })}
+                                      className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                      placeholder="9-digit PAN/VAT"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Business Type</label>
+                                    <select
+                                      value={profileForm.businessType}
+                                      onChange={e => setProfileForm({ ...profileForm, businessType: e.target.value })}
+                                      className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                    >
+                                      <option value="retailer">Retailer Store</option>
+                                      <option value="wholesaler">Wholesaler / Distributor</option>
+                                      <option value="manufacturer">Manufacturer</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Business Address</label>
+                                  <input
+                                    type="text"
+                                    value={profileForm.address}
+                                    onChange={e => setProfileForm({ ...profileForm, address: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                    placeholder="Tole, City, District"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-gray-100">
+                              <button
+                                type="submit"
+                                disabled={savingProfile}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                Save Changes
+                              </button>
+                            </div>
+                          </motion.form>
                         )}
-                      </div>
-                      <div className="mt-8 pt-6 border-t border-gray-100">
-                        <button className="px-6 py-2.5 border border-gray-200 text-gray-700 rounded-xl font-bold text-sm hover:bg-gray-50 transition">
-                          Change Password
-                        </button>
-                      </div>
+
+                        {settingsTab === "security" && (
+                          <motion.form
+                            key="security-form"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            onSubmit={handleUpdatePassword}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-base font-bold text-gray-900 mb-2">Change Password</h3>
+                            <p className="text-xs text-gray-500 font-medium">To protect your marketplace account, choose a strong password consisting of alphanumeric and special characters.</p>
+
+                            <div className="space-y-5">
+                              <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Current Password</label>
+                                <input
+                                  type="password"
+                                  required
+                                  value={passwordForm.currentPassword}
+                                  onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                  className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                  placeholder="••••••••"
+                                />
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">New Password</label>
+                                  <input
+                                    type="password"
+                                    required
+                                    value={passwordForm.newPassword}
+                                    onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                    placeholder="Minimum 8 characters"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2">Confirm New Password</label>
+                                  <input
+                                    type="password"
+                                    required
+                                    value={passwordForm.confirmPassword}
+                                    onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                    className="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm px-4 py-3 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition shadow-sm font-medium"
+                                    placeholder="Re-enter new password"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-gray-100">
+                              <button
+                                type="submit"
+                                disabled={savingPassword}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2 disabled:opacity-50"
+                              >
+                                {savingPassword ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                                Update Password
+                              </button>
+                            </div>
+                          </motion.form>
+                        )}
+
+                        {settingsTab === "preferences" && (
+                          <motion.div
+                            key="preferences-form"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                          >
+                            <h3 className="text-base font-bold text-gray-900 mb-2">Notification & Interface Preferences</h3>
+                            <p className="text-xs text-gray-500 font-medium">Tweak how eAson marketplace updates you about transactions and system events.</p>
+
+                            <div className="space-y-4 pt-2">
+                              {/* Toggle items */}
+                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-900">Email Notifications</h4>
+                                  <p className="text-xs text-gray-500 font-medium">Receive order confirmation, status updates, and KYC results via email.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" defaultChecked className="sr-only peer" />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-900">Chat Sound Alerts</h4>
+                                  <p className="text-xs text-gray-500 font-medium">Play a distinct chime whenever a new supplier or retailer sends a message.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" defaultChecked className="sr-only peer" />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-900">Auto Standing-Order Renewal</h4>
+                                  <p className="text-xs text-gray-500 font-medium">Automatically dispatch orders matching your weekly subscription standing templates.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" className="sr-only peer" />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                              </div>
+
+                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                <div>
+                                  <h4 className="text-sm font-bold text-gray-900">Weekly Analytics Report</h4>
+                                  <p className="text-xs text-gray-500 font-medium">Get a weekly summarized PDF of your B2B sales volume, AOV, and net profit metric.</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input type="checkbox" defaultChecked className="sr-only peer" />
+                                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-4 border-t border-gray-100">
+                              <button
+                                onClick={() => toast.success("Preferences updated successfully!")}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-sm transition flex items-center gap-2"
+                              >
+                                <Check className="w-4 h-4" /> Save Preferences
+                              </button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
                 )}

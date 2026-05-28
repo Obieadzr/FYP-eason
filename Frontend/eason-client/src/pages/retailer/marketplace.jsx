@@ -18,7 +18,9 @@ import {
   Linkedin,
   Mail,
   Search,
-  ChevronRight
+  ChevronRight,
+  Lock,
+  Store
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import API from "../../utils/api";
@@ -199,6 +201,18 @@ export default function Marketplace() {
   useOutsideClick(marginRef, () => setMarginDropdownOpen(false));
 
   const { cartCount, addToCart, getAvailableStock } = useCart();
+
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
+  const moreRef = useRef(null);
+  useOutsideClick(moreRef, () => setMoreDropdownOpen(false));
+
+  const handleCategoryClick = (categoryName) => {
+    setSelectedCategory(categoryName);
+    setMoreDropdownOpen(false);
+    setTimeout(() => {
+      document.getElementById("products-grid")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -436,28 +450,53 @@ export default function Marketplace() {
               return (
                 <div
                   key={cat}
-                  onClick={() => setSelectedCategory(cat)}
+                  onClick={() => handleCategoryClick(cat)}
                   className={`relative px-5 py-3.5 text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap ${isActive ? "text-white" : "text-white/45 hover:text-white"}`}
                 >
                   {cat}
-                  {isActive && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500" />}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeCategoryBorder"
+                      className="absolute bottom-0 left-0 right-0 h-[2px] bg-emerald-500"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
                 </div>
               );
             })}
             {hiddenCategories.length > 0 && (
-              <div className="relative group px-5 py-3.5 text-[13px] font-medium text-white/45 hover:text-white transition-colors cursor-pointer whitespace-nowrap">
-                More ▾
-                <div className="hidden group-hover:block absolute top-full right-0 bg-[#1a1a1a] border border-white/8 rounded-lg mt-1 py-2 shadow-xl z-50 min-w-[160px]">
-                  {hiddenCategories.map(cat => (
-                    <div
-                      key={cat}
-                      onClick={(e) => { e.stopPropagation(); setSelectedCategory(cat); }}
-                      className="block px-4 py-2 text-sm text-white/60 hover:text-white hover:bg-white/5 transition"
-                    >
-                      {cat}
-                    </div>
-                  ))}
+              <div ref={moreRef} className="relative px-5 py-3.5 text-[13px] font-medium transition-colors cursor-pointer whitespace-nowrap">
+                <div 
+                  onClick={() => setMoreDropdownOpen(!moreDropdownOpen)} 
+                  className={`flex items-center gap-1.5 ${moreDropdownOpen || hiddenCategories.includes(selectedCategory) ? "text-white" : "text-white/45 hover:text-white"}`}
+                >
+                  More <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${moreDropdownOpen ? "rotate-180" : ""}`} />
                 </div>
+                <AnimatePresence>
+                  {moreDropdownOpen && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute top-full right-0 bg-[#161616] border border-white/10 rounded-xl mt-1.5 py-2 shadow-2xl z-50 min-w-[200px]"
+                    >
+                      {hiddenCategories.map(cat => {
+                        const isSubActive = selectedCategory === cat;
+                        return (
+                          <div
+                            key={cat}
+                            onClick={(e) => { e.stopPropagation(); handleCategoryClick(cat); }}
+                            className={`px-4 py-2.5 text-xs font-semibold hover:bg-white/5 transition flex items-center justify-between ${isSubActive ? "text-emerald-400 bg-white/[0.02]" : "text-white/60 hover:text-white"}`}
+                          >
+                            <span>{cat}</span>
+                            {isSubActive && <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />}
+                          </div>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             )}
           </div>

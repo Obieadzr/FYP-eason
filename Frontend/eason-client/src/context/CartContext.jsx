@@ -76,7 +76,10 @@ export const CartProvider = ({ children }) => {
       return;
     }
 
-    if (user.id === product.wholesaler?._id || user._id === product.wholesaler?._id) {
+    const wholesalerId = product.wholesaler?._id || (typeof product.wholesaler === "string" ? product.wholesaler : null);
+    const userId = user?._id || user?.id;
+
+    if (wholesalerId && userId && userId.toString() === wholesalerId.toString()) {
       toast.error("You cannot add your own products to the cart", {
         duration: 4000,
       });
